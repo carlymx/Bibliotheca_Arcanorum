@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/imgs/img_web_002.png" alt="Bibliotheca Arcanorum" width="200">
+  <img src="src/imgs/img_web_002.png" alt="Bibliotheca Arcanorum" width="800">
   <br>
   <em>Collectio Manuscriptorum</em>
 </p>
