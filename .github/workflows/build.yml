@@ -12,12 +12,15 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            shell: bash
             artifact-name: Gestor_biblioteca-x86_64.AppImage
             build-script: scripts/build-linux.sh
           - os: windows-latest
+            shell: pwsh
             artifact-name: Gestor_biblioteca.exe
             build-script: scripts/build-windows.ps1
           - os: macos-latest
+            shell: bash
             artifact-name: Gestor_biblioteca.dmg
             build-script: scripts/build-macos.sh
 
@@ -38,7 +41,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y poppler-utils
 
       - name: Run build script
-        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        shell: ${{ matrix.shell }}
         run: ${{ matrix.build-script }}
 
       - uses: actions/upload-artifact@v4
