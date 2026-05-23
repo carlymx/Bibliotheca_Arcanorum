@@ -18,11 +18,15 @@ if pdftoppm_path and os.path.isfile(pdftoppm_path):
 sv_ttk_datas = collect_data_files('sv_ttk')
 sv_ttk_submodules = collect_submodules('sv_ttk')
 
+icon_datas = [
+    ('tools/Gestor_biblioteca/src/assets/icons', 'src/assets/icons'),
+]
+
 a = Analysis(
     ['tools/Gestor_biblioteca/main.py'],
     pathex=[],
     binaries=extra_binaries,
-    datas=sv_ttk_datas,
+    datas=sv_ttk_datas + icon_datas,
     hiddenimports=[
         'sv_ttk',
         'PIL', 'PIL.Image',
