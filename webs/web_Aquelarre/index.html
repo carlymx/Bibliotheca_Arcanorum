@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biblioteca de Documentos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ===== SPLASH / PORTADA ===== -->
+<div id="splash">
+  <div class="splash-inner">
+    <img src="assets/portada_web.png" alt="Archivo de Aquelarre">
+    <div class="splash-title"><img class="logo-splash" src="assets/icons/logo_aquelarre.png" alt=""> <span id="splash-title">BIBLIOTECA DE DOCUMENTOS</span> <img class="logo-splash" src="assets/icons/logo_aquelarre.png" alt=""></div>
+    <div class="splash-sub">Bibliotheca Arcanorum — Collectio Manuscriptorum</div>
+    <div class="splash-error" id="splash-error" style="display:none">⚠ El archivo <code>./data/catalogo.js</code> no se encuentra o tiene un formato incorrecto.<br>La biblioteca no puede cargarse sin un catálogo válido.</div>
+    <button class="btn-enter">➤ ENTRAR A LA BIBLIOTECA</button>
+    <div class="splash-ornament"></div>
+    <div class="splash-footer">
+      <p>Todos los materiales son obra de sus respectivos autores.</p>
+      <p>Todo este material ha sido creado y compartido por sus autores y la comunidad en algún momento por internet. Esta colección solo intenta rescatar para la conservación cultural y uso sin ánimo de lucro. Si te gusta el juego y aún está disponible, te animo a que lo compres; ya se ha convertido en una joya de la cultura de nuestro país y del mundo entero.</p>
+      <p>Maquetación por CaRLyMx (Mayo 2026) — <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">Licencia GPL v3</a>.</p>
+      <p>Fe de erratas: Para crear partes de este documento se ha usado IA. La IA puede cometer errores.</p>
+      <p>Aquelarre &copy; Ricard Ib&aacute;&ntilde;ez</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="top-title"><img class="logo-topbar" src="assets/icons/logo_aquelarre.png" alt=""> <span id="library-name">Biblioteca de Documentos</span> <span id="library-version">v0.9.17</span><img class="logo-topbar" src="assets/icons/logo_aquelarre.png" alt=""></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" data-view="biblioteca"><span class="tab-icon">📖</span> Biblioteca</button>
+    <button class="tab" data-view="manuales"><span class="tab-icon">📜</span> Manuales</button>
+    <button class="tab" data-view="expansiones"><span class="tab-icon">⚔</span> Expansiones</button>
+    <button class="tab" data-view="modulos"><span class="tab-icon">🗺</span> Módulos</button>
+    <button class="tab" data-view="suplementos"><span class="tab-icon">📜</span> Suplementos</button>
+    <button class="tab" data-view="mapas"><span class="tab-icon">🌍</span> Mapas</button>
+    <button class="tab" data-view="rolmasters"><span class="tab-icon">📚</span> Rolmasters</button>
+    <button class="tab" id="btn-config" style="margin-left:auto;"><span class="tab-icon">⚙</span> Configuración</button>
+    <button class="tab" data-view="ayuda"><span class="tab-icon">❓</span> Ayuda</button>
+  </div>
+
+  <!-- LIBRARY VIEW -->
+  <div id="library-view">
+
+    <!-- CONTROL BAR -->
+    <div class="control-bar">
+      <div class="search-box">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="search-input" placeholder="Buscar manuscritos…">
+        <button class="search-clear" id="search-clear" title="Limpiar búsqueda">✕</button>
+      </div>
+      <button class="filter-btn" data-filter="fav">★ Favoritos</button>
+      <button class="filter-btn" data-filter="read">✓ Leídos</button>
+      <select class="sort-select" id="tipo-filter">
+        <option value="">Todos</option>
+        <option value="manual" data-label="📖 Manual"></option>
+        <option value="suplemento" data-label="📜 Suplemento"></option>
+        <option value="campaña" data-label="⚔ Campaña"></option>
+        <option value="aventura" data-label="🗡 Aventura"></option>
+        <option value="revista" data-label="📰 Revista"></option>
+        <option value="documento" data-label="📄 Documento"></option>
+        <option value="info" data-label="ℹ Info"></option>
+        <option value="musica" data-label="🎵 Música"></option>
+        <option value="imagen" data-label="🖼 Imagen"></option>
+        <option value="mapa" data-label="🌍 Mapa"></option>
+        <option value="hoja_pj" data-label="📋 Hoja PJ"></option>
+        <option value="pantalla" data-label="🛡 Pantalla"></option>
+        <option value="otro" data-label="📦 Otro"></option>
+      </select>
+      <select class="sort-select" id="sort-select">
+        <option value="title">Título</option>
+        <option value="rating">Valoración</option>
+        <option value="date">Fecha añadida</option>
+        <option value="read">Última lectura</option>
+      </select>
+      <button class="sort-dir" id="sort-dir">↑</button>
+      <button class="view-toggle" id="browse-toggle" title="Modo carpetas">📂</button>
+      <button class="view-toggle" id="view-toggle" title="Cambiar vista">⊞</button>
+      <button class="filter-btn" id="btn-toggle-ocultos" title="Mostrar/ocultar fichas ocultas">👁 Ocultos</button>
+    </div>
+
+    <!-- STATS BAR -->
+    <div class="stats-bar" id="stats-bar">
+      <span>Cargando…</span>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+
+      <!-- TREE SIDEBAR -->
+      <div class="tree-sidebar">
+        <div id="tree-container"></div>
+      </div>
+      <button class="tree-toggle" id="tree-toggle">☰ Navegar categorías</button>
+      <div class="mobile-menu-overlay" id="mobile-menu-overlay"></div>
+
+      <!-- CARD GRID -->
+      <div class="card-grid" id="card-grid">
+        <span style="color:var(--gold-light);font-style:italic;padding:40px;text-align:center;">Cargando manuscritos…</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROLMASTERS VIEW -->
+  <div id="rolmasters-view" style="display:none;">
+    <div class="main-content" style="padding:0 24px;">
+      <div class="iframe-container">
+        <iframe src="" title="Rolmasters — Archivo de Aquelarre"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- AYUDA VIEW -->
+  <div id="ayuda-view" style="display:none;">
+    <div class="ayuda-content">
+      <section class="ayuda-seccion">
+        <h2>📖 Acerca de</h2>
+        <p class="ayuda-texto"><strong><span id="help-title">Biblioteca de Documentos</span></strong></p>
+        <p class="ayuda-texto">v0.9.17</p>
+        <p class="ayuda-texto">Creado por <strong>CaRLyMx</strong> (2026)</p>
+        <p class="ayuda-texto">Licencia: <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GNU General Public License v3.0</a></p>
+        <p class="ayuda-texto" style="font-size:0.85em;color:var(--ink-light);margin-top:12px;">Todos los materiales son obra de sus respectivos autores. Aquelarre &copy; Ricard Ib&aacute;&ntilde;ez</p>
+      </section>
+
+      <section class="ayuda-seccion">
+        <h2>🙏 Agradecimientos</h2>
+        <div class="settings-credits">
+          Ricard Ibáñez, Adrian Cobos, Adriano Justicia, Aker, Albert Tarres, Albert Tarres Romin, Alejandro Calvo,<br>
+          Alejandro Escamilla, Alejandro Escamilla Audivert, Alejandro Rabanal e Ivan Abad, Angel Menargues, Angel Paredes, Antonio Peiro,<br>
+          Antonio Polo, Benito, Brujo13, Bruno Termotanque, Carlos A De La Torre, Chronos,<br>
+          Claudi Paz, Daniel Ben Judas, Daniel Julivert, David Revetllat i Barba, David Ros, Diego Marques Vega,<br>
+          Eduardo Villalobos, El Guardián De Los Arcanos, Enric Grau, Entropía, Felipe Perez Palencia, Fernando,<br>
+          Fernando Caton, Francisco J Llatas, Christian González, Francisco Jimenez Ontiveros, Guillermo Dorado, Hardeck, Iago Urruela,<br>
+          Ivan Abad, Ivan Mata Portugués, Javi Guadalupo, Jc Galvan, Jorge Peralta, Jose Antonio Neto,<br>
+          Jose Manuel Delgado Chiqui, Jr Despuig, Juan Miguel Mancheno Chicon, Juan Pablo Fernandez, Juan Pablo Fernandez Del Rio, Juan Vicente Mañanas Abad,<br>
+          Kissinger, Lindelion Sireo, Lope Manuel De Pelayo, Lorena Rela, Luis A Fernandez Paredes, Luis F Tadevs,<br>
+          Luis Gil, Luis Gil Concepción, Luis González, Luis Miguez, Manuel Jimenez, Manuel Romero Ocaña,<br>
+          Miguel Aceituno, Miguel Aceytuno, Miguel De Andres, Mr Rol, Orthanc, Orthanc Persorol,<br>
+          Pablo D Amico, Pedro García, Pedro J Ramos, Pedro Tardón, Pepe Partidas, Persorol,<br>
+          Raúl Olivares, Raúl Tardón, Roberto Tito Mochilo Temiño, Rodrigo Fernandez, Rolmasters, Samuel Rubio,<br>
+          Santiago Gomez Urruela, Santiago Martínez, Santiago Urruela, Sergio Llamas, Sharky21, Simon Blasco Perales,<br>
+          Surf, The Grave Dancer, The Peacemaker, Thorskar, Ugi, Vj Rolmasters<br>
+          ... y más.
+        </div>
+      </section>
+
+      <section class="ayuda-seccion">
+        <h2>❓ Ayuda — Guía de botones</h2>
+
+        <h3>Pantalla de inicio</h3>
+        <ul class="ayuda-lista">
+          <li><strong>➤ ENTRAR A LA BIBLIOTECA</strong> — Oculta la pantalla de bienvenida y abre la aplicación.</li>
+        </ul>
+
+        <h3>Barra de pestañas</h3>
+        <ul class="ayuda-lista">
+          <li><strong>📖 Biblioteca</strong> — Muestra todos los manuscritos catalogados.</li>
+          <li><strong>📜 Manuales</strong> — Filtra solo los manuales básicos.</li>
+          <li><strong>⚔ Expansiones</strong> — Filtra las expansiones oficiales.</li>
+          <li><strong>🗺 Módulos</strong> — Filtra las aventuras y módulos.</li>
+          <li><strong>📜 Suplementos</strong> — Filtra los suplementos.</li>
+          <li><strong>🌍 Mapas</strong> — Filtra los mapas.</li>
+          <li><strong>📚 Rolmasters</strong> — Muestra la revista Rolmasters en un iframe.</li>
+          <li><strong>❓ Ayuda</strong> — Muestra esta guía y la información del programa.</li>
+          <li><strong>⚙ Configuración</strong> — Abre el panel de ajustes (tema, tamaño, resets).</li>
+        </ul>
+
+        <h3>Barra de controles</h3>
+        <ul class="ayuda-lista">
+          <li><strong>🔍 Buscar</strong> — Escribe para filtrar por título, descripción o cualquier texto.</li>
+          <li><strong>★ Favoritos</strong> — Muestra solo los marcados como favoritos.</li>
+          <li><strong>✓ Leídos</strong> — Muestra solo los marcados como leídos.</li>
+          <li><strong>📖 Todos / tipo</strong> — Filtra por tipo de manuscrito (manual, aventura, mapa…).</li>
+          <li><strong>↑ / ↓</strong> — Cambia entre orden ascendente y descendente.</li>
+          <li><strong>📂 / 📄</strong> — Alterna entre el modo carpetas (árbol) y el modo plano.</li>
+          <li><strong>⊞ / ☷</strong> — Alterna entre la vista cuadrícula y la vista lista.</li>
+        </ul>
+
+        <h3>Panel lateral</h3>
+        <ul class="ayuda-lista">
+          <li><strong>☰ Navegar categorías</strong> — Abre o cierra el árbol de categorías para explorar por carpetas.</li>
+        </ul>
+
+        <h3>Botones de cada tarjeta</h3>
+        <ul class="ayuda-lista">
+          <li><strong>♥ / ♡</strong> — Marca o desmarca el manuscrito como favorito.</li>
+          <li><strong>⊙ / ✓</strong> — Marca el manuscrito como leído o no leído.</li>
+          <li><strong>📋</strong> — Abre el panel de detalle con información completa del manuscrito.</li>
+          <li><strong>📁</strong> — Copia la ruta de la carpeta al portapapeles.</li>
+          <li><strong>📄</strong> — Abre el archivo PDF directamente.</li>
+        </ul>
+
+        <h3>Panel de detalle (al hacer clic en 📋)</h3>
+        <ul class="ayuda-lista">
+          <li><strong>✕</strong> — Cierra el panel de detalle.</li>
+          <li><strong>📄 Abrir PDF</strong> — Abre el archivo PDF.</li>
+          <li><strong>📁 Carpeta</strong> — Copia la ruta de la carpeta al portapapeles.</li>
+          <li><strong>♥ / ♡</strong> — Marca o desmarca como favorito.</li>
+          <li><strong>⊙ No leído / ✓ Leído</strong> — Alterna el estado de lectura.</li>
+        </ul>
+
+        <h3>Configuración (⚙)</h3>
+        <ul class="ayuda-lista">
+          <li><strong>☆ Reset Favoritos</strong> — Borra todos los favoritos.</li>
+          <li><strong>✓ Reset Leídos</strong> — Borra el estado de lectura de todos los manuscritos.</li>
+          <li><strong>⭐ Reset Valoraciones</strong> — Borra todas las valoraciones por estrellas.</li>
+          <li><strong>📝 Reset Notas</strong> — Borra todas las notas personales.</li>
+          <li><strong>⚠ Reset Todo</strong> — Borra todos los datos guardados (requiere doble confirmación).</li>
+        </ul>
+
+        <h3>💾 Importar / Exportar datos</h3>
+        <p class="ayuda-texto">
+          Tus valoraciones, favoritos, notas, estado de lectura y ajustes de visualización se guardan en el navegador.
+          Con <strong>⬇ Exportar datos</strong> puedes descargar un archivo <code>.json</code> con toda esa información
+          para llevarla a otro ordenador o mantener una copia de seguridad.
+        </p>
+        <p class="ayuda-texto">
+          Para restaurar una copia, usa <strong>⬆ Importar datos</strong> desde el mismo panel de Configuración,
+          o bien <strong>arrastra el archivo .json</strong> directamente a la pantalla de bienvenida al abrir la web.
+          Si es tu primera vez y no hay datos guardados, verás una zona de destino señalada en la portada.
+        </p>
+        <p class="ayuda-texto" style="font-size:0.85em;color:var(--ink-light);">
+          Consejo: exporta regularmente si usas la biblioteca desde varios dispositivos o navegadores.
+          El archivo exportado contiene todo lo necesario para restaurar tu estado exacto.
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <!-- DETAIL PANEL -->
+  <div class="detail-overlay" id="detail-overlay"></div>
+  <div class="detail-panel" id="detail-panel">
+    <button class="detail-close">✕</button>
+    <div class="detail-content"></div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div class="settings-overlay" id="settings-overlay">
+    <div class="settings-modal">
+      <h2>⚙ Configuración</h2>
+      <button class="settings-close" id="settings-close">✕</button>
+
+      <section class="settings-section">
+        <h3>🎨 Tema</h3>
+        <div class="settings-themes">
+          <label class="theme-option" data-theme="medieval">
+            <input type="radio" name="theme" value="medieval" checked>
+            <span class="theme-preview" style="background:#2b1a0e;border-color:#8b6b2f;"></span>
+            Medieval
+          </label>
+          <label class="theme-option" data-theme="claro">
+            <input type="radio" name="theme" value="claro">
+            <span class="theme-preview" style="background:#f4ecd8;border-color:#8b6b2f;"></span>
+            Claro
+          </label>
+          <label class="theme-option" data-theme="oscuro">
+            <input type="radio" name="theme" value="oscuro">
+            <span class="theme-preview" style="background:#0a0a0a;border-color:#444;"></span>
+            Oscuro
+          </label>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>📐 Tamaño de tarjetas</h3>
+        <select id="settings-card-size">
+          <option value="small">Pequeño</option>
+          <option value="normal" selected>Normal</option>
+          <option value="large">Grande</option>
+        </select>
+      </section>
+
+      <section class="settings-section">
+        <h3>💾 Datos de usuario</h3>
+        <div class="settings-reset-buttons">
+          <button class="filter-btn" id="export-user-data">⬇ Exportar datos</button>
+          <button class="filter-btn" id="import-user-data">⬆ Importar datos</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>🔄 Reset</h3>
+        <div class="settings-reset-buttons">
+          <button class="filter-btn" data-reset="fav">☆ Reset Favoritos</button>
+          <button class="filter-btn" data-reset="read">✓ Reset Leídos</button>
+          <button class="filter-btn" data-reset="rating">⭐ Reset Valoraciones</button>
+          <button class="filter-btn" data-reset="notes">📝 Reset Notas</button>
+          <button class="filter-btn" data-reset="all" style="background:var(--blood);border-color:var(--blood);color:var(--bg-paper);">⚠ Reset Todo</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- HELP MODAL -->
+  <div class="settings-overlay" id="help-overlay">
+    <div class="settings-modal help-modal">
+      <h2>❓ Ayuda</h2>
+      <button class="settings-close" id="help-close">✕</button>
+
+      <section class="settings-section">
+        <h3>💾 Persistencia de datos</h3>
+        <p class="help-text">
+          Tus valoraciones, favoritos, estado de lectura y notas se guardan automáticamente en el
+          navegador (<code>localStorage</code>). No se pierden al cerrar la página.
+        </p>
+      </section>
+
+      <section class="settings-section">
+        <h3>🔍 Búsqueda y filtros</h3>
+        <p class="help-text">
+          Escribe en el campo de búsqueda para filtrar por título, descripción o cualquier texto.
+          Usa los botones ★ Favoritos, ✓ Leídos para filtrar por estado, y el desplegable de tipos para filtrar por categoría.
+          Cambia el orden con el menú desplegable y el botón ↑↓.
+        </p>
+    </section>
+  </div>
+
+</div>
+
+<input type="file" id="import-file-input" accept=".json" style="display:none">
+<script src="data/catalogo.js"></script>
+<script src="js/data.js"></script>
+<script src="js/tree.js"></script>
+<script src="js/search.js"></script>
+<script src="js/card.js"></script>
+<script src="js/detail.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

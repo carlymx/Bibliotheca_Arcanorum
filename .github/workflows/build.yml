@@ -1,0 +1,47 @@
+name: Build Gestor_biblioteca
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact-name: Gestor_biblioteca-x86_64.AppImage
+            build-script: scripts/build-linux.sh
+          - os: windows-latest
+            artifact-name: Gestor_biblioteca.exe
+            build-script: scripts/build-windows.ps1
+          - os: macos-latest
+            artifact-name: Gestor_biblioteca.dmg
+            build-script: scripts/build-macos.sh
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: pip install -r tools/Gestor_biblioteca/requirements.txt pyinstaller
+
+      - name: Install system deps (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      - name: Run build script
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        run: ${{ matrix.build-script }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: dist/${{ matrix.artifact-name }}
