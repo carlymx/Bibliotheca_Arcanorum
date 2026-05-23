@@ -8,14 +8,19 @@ pyinstaller build.spec \
     --distpath dist \
     --workpath build
 
-DIST_DIR="dist/Gestor_biblioteca"
-if [ ! -d "$DIST_DIR" ]; then
-    DIST_DIR="dist/Gestor_biblioteca.app"
-fi
-
 APPDIR="dist/AppDir"
 mkdir -p "$APPDIR/usr/bin"
-cp -r "$DIST_DIR"/* "$APPDIR/usr/bin/"
+
+if [ -d "dist/Gestor_biblioteca.app" ]; then
+    cp -r dist/Gestor_biblioteca.app/* "$APPDIR/usr/bin/"
+elif [ -d "dist/Gestor_biblioteca" ]; then
+    cp -r dist/Gestor_biblioteca/* "$APPDIR/usr/bin/"
+elif [ -f "dist/Gestor_biblioteca" ]; then
+    cp dist/Gestor_biblioteca "$APPDIR/usr/bin/"
+else
+    echo "ERROR: no se encuentra el ejecutable en dist/"
+    exit 1
+fi
 
 cat > "$APPDIR/gestor_biblioteca.desktop" <<EOF
 [Desktop Entry]

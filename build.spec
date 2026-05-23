@@ -76,6 +76,7 @@ if sys.platform == 'darwin':
         },
     )
 else:
+    icon_path = 'assets/icon.ico' if sys.platform == 'win32' else 'assets/icon.png'
     exe = EXE(
         pyz,
         a.scripts,
@@ -83,6 +84,7 @@ else:
         a.datas,
         [],
         name='Gestor_biblioteca',
+        icon=icon_path,
         debug=False,
         bootloader_ignore_signals=False,
         strip=False,

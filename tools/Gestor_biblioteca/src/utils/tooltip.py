@@ -1,5 +1,6 @@
+import sys
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, font
 
 
 class ToolTip:
@@ -28,8 +29,36 @@ class ToolTip:
             self.tip_window = None
 
 
+_EMOJI_STYLE = None
+
+
+def _init_emoji_style():
+    global _EMOJI_STYLE
+    if _EMOJI_STYLE is not None:
+        return
+    candidates = []
+    if sys.platform == "win32":
+        candidates = ["Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"]
+    elif sys.platform == "darwin":
+        candidates = ["Apple Color Emoji"]
+    else:
+        candidates = ["Noto Color Emoji"]
+    available = font.families()
+    for name in candidates:
+        if name in available:
+            s = ttk.Style()
+            s.configure("Emoji.TButton", font=font.Font(family=name, size=12))
+            _EMOJI_STYLE = "Emoji.TButton"
+            return
+    _EMOJI_STYLE = False
+
+
 def make_btn(parent, icon, command, tooltip_text):
-    btn = ttk.Button(parent, text=icon, command=command, width=3)
+    _init_emoji_style()
+    kwargs = {"text": icon, "command": command, "width": 3}
+    if _EMOJI_STYLE:
+        kwargs["style"] = _EMOJI_STYLE
+    btn = ttk.Button(parent, **kwargs)
     btn.pack(side="left", padx=1)
     ToolTip(btn, tooltip_text)
     return btn
