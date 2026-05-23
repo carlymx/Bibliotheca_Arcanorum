@@ -6,11 +6,9 @@ if ! command -v pdftoppm &>/dev/null; then
     echo "Instalando poppler..."
     brew install poppler
 fi
-PDFTOPPM=$(which pdftoppm)
+export PDFTOPPM=$(which pdftoppm)
 
 pyinstaller build.spec \
-    --add-binary "$PDFTOPPM:." \
-    --collect-all sv_ttk \
     --distpath dist \
     --workpath build
 

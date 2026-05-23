@@ -13,12 +13,10 @@ if (-not (Test-Path "$popplerDir\pdftoppm.exe")) {
 
 $pdftoppm = Get-ChildItem -Path $popplerDir -Recurse -Filter "pdftoppm.exe" | Select-Object -First 1 -ExpandProperty FullName
 Write-Output "pdftoppm en: $pdftoppm"
+$env:PDFTOPPM = $pdftoppm
 
 pyinstaller build.spec `
-    --add-binary "$pdftoppm;." `
-    --collect-all sv_ttk `
     --distpath dist `
-    --workpath build `
-    --onefile
+    --workpath build
 
 Write-Output "Build completado: dist/Gestor_biblioteca.exe"

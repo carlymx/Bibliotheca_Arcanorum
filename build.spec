@@ -2,23 +2,34 @@
 # build.spec — PyInstaller spec para Gestor_biblioteca
 # Uso: pyinstaller build.spec
 
+import os
 import sys
-from pathlib import Path
+
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 block_cipher = None
+
+pdftoppm_path = os.environ.get('PDFTOPPM', '')
+
+extra_binaries = []
+if pdftoppm_path and os.path.isfile(pdftoppm_path):
+    extra_binaries.append((pdftoppm_path, '.'))
+
+sv_ttk_datas = collect_data_files('sv_ttk')
+sv_ttk_submodules = collect_submodules('sv_ttk')
 
 a = Analysis(
     ['tools/Gestor_biblioteca/main.py'],
     pathex=[],
-    binaries=[],
-    datas=[],
+    binaries=extra_binaries,
+    datas=sv_ttk_datas,
     hiddenimports=[
         'sv_ttk',
         'PIL', 'PIL.Image',
         'mutagen',
         'mutagen.mp3', 'mutagen.mp4', 'mutagen.oggvorbis', 'mutagen.flac',
         'mutagen.id3',
-    ],
+    ] + sv_ttk_submodules,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

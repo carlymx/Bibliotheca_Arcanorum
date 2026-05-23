@@ -2,11 +2,9 @@
 # build-linux.sh — Construye Gestor_biblioteca + AppImage
 set -euo pipefail
 
-PDFTOPPM=$(which pdftoppm)
+export PDFTOPPM=$(which pdftoppm)
 
 pyinstaller build.spec \
-    --add-binary "$PDFTOPPM:." \
-    --collect-all sv_ttk \
     --distpath dist \
     --workpath build
 
