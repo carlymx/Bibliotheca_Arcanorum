@@ -72,7 +72,7 @@ tools/Gestor_biblioteca/PLAN.md
 tools/Gestor_biblioteca/BUILD_PLAN.md
 
 # --- VS Code workspace (not app source) ---
-/src/
+#/src/
 
 # --- Gestor_biblioteca local config ---
 tools/Gestor_biblioteca/config.json
