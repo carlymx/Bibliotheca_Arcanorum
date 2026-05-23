@@ -124,7 +124,7 @@ class App:
         toolbar = ttk.Frame(self.root)
         toolbar.grid(row=0, column=0, sticky="ew", padx=2, pady=2)
 
-        make_btn(toolbar, "🗂️", self.nuevo_catalogo, "Nuevo catálogo (Ctrl+Shift+N)")
+        make_btn(toolbar, "📝", self.nuevo_catalogo, "Nuevo catálogo (Ctrl+Shift+N)")
         make_btn(toolbar, "📂", self.open_json, "Abrir biblioteca (Ctrl+O)")
         make_btn(toolbar, "💾", self.save, "Guardar catálogo (Ctrl+S)")
         ttk.Separator(toolbar, orient="vertical").pack(side="left", fill="y", padx=4)

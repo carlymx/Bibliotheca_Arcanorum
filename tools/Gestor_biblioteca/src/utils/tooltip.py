@@ -1,3 +1,4 @@
+import os
 import sys
 import tkinter as tk
 from tkinter import ttk, font
@@ -29,7 +30,40 @@ class ToolTip:
             self.tip_window = None
 
 
+_EMOJI_MAP = {
+    "\U0001F4DD":       "note-plus",
+    "\U0001F4C2":       "folder-open",
+    "\U0001F4BE":       "content-save",
+    "\u2795":           "plus",
+    "\U0001F5D1\uFE0F": "delete",
+    "\U0001F4C1":       "folder-plus",
+    "\U0001F6AB":       "folder-minus",
+}
+
 _EMOJI_STYLE = None
+_IMAGE_CACHE = {}
+
+
+def _icon_dir():
+    if getattr(sys, "frozen", False):
+        return os.path.join(sys._MEIPASS, "src", "assets", "icons")
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "icons")
+
+
+def _load_icon(name):
+    if name in _IMAGE_CACHE:
+        return _IMAGE_CACHE[name]
+    path = os.path.join(_icon_dir(), name + ".png")
+    if not os.path.isfile(path):
+        _IMAGE_CACHE[name] = None
+        return None
+    try:
+        img = tk.PhotoImage(file=path)
+        _IMAGE_CACHE[name] = img
+        return img
+    except Exception:
+        _IMAGE_CACHE[name] = None
+        return None
 
 
 def _init_emoji_style():
@@ -54,10 +88,17 @@ def _init_emoji_style():
 
 
 def make_btn(parent, icon, command, tooltip_text):
-    _init_emoji_style()
-    kwargs = {"text": icon, "command": command, "width": 3}
-    if _EMOJI_STYLE:
-        kwargs["style"] = _EMOJI_STYLE
+    name = _EMOJI_MAP.get(icon)
+    img = _load_icon(name) if name else None
+
+    if img:
+        kwargs = {"image": img, "command": command}
+    else:
+        _init_emoji_style()
+        kwargs = {"text": icon, "command": command, "width": 3}
+        if _EMOJI_STYLE:
+            kwargs["style"] = _EMOJI_STYLE
+
     btn = ttk.Button(parent, **kwargs)
     btn.pack(side="left", padx=1)
     ToolTip(btn, tooltip_text)

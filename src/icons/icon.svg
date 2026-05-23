@@ -2,13 +2,13 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="113.74673mm"
-   height="112.20135mm"
-   viewBox="0 0 429.90892 424.06812"
+   width="512"
+   height="511.99997"
+   viewBox="0 0 4585.6951 4523.393"
    version="1.1"
    id="svg1"
    xml:space="preserve"
-   sodipodi:docname="logo.svg"
+   sodipodi:docname="icon.svg"
    inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -32,11 +32,11 @@
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1"><inkscape:page
-       x="7.3547898e-22"
+       x="0"
        y="0"
-       width="429.90894"
-       height="424.06812"
-       id="page1"
+       width="4585.6953"
+       height="4523.3931"
+       id="page2"
        margin="0"
        bleed="0" /></sodipodi:namedview><defs
      id="defs1"><filter
@@ -73,9 +73,9 @@
      inkscape:label="Capa 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-135.94647,-322.38636)"><g
+     transform="translate(1732.8005,1152.0562)"><g
        id="g4"
-       transform="matrix(0.9541025,0,0,0.9541025,16.105476,24.528561)"><circle
+       transform="matrix(10.723867,0,0,10.723867,-3202.9678,-4625.6471)"><circle
          style="fill:#1a1a1a;stroke:#ff6600;stroke-width:0.377953;stroke-linecap:round;stroke-linejoin:round"
          id="circle1"
          cx="356.90094"

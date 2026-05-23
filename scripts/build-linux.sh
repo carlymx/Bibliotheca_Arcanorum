@@ -41,6 +41,6 @@ wget -q "https://github.com/AppImage/AppImageKit/releases/download/continuous/ap
     -O /tmp/appimagetool
 chmod +x /tmp/appimagetool
 
-ARCH=x86_64 /tmp/appimagetool "$APPDIR" "dist/Gestor_biblioteca-x86_64.AppImage"
+ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 /tmp/appimagetool "$APPDIR" "dist/Gestor_biblioteca-x86_64.AppImage"
 
 rm -rf "$APPDIR"

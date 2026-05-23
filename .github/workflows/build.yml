@@ -35,7 +35,7 @@ jobs:
 
       - name: Install system deps (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils libfuse2
 
       - name: Run build script (Unix)
         if: runner.os != 'Windows'
