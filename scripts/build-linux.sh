@@ -22,6 +22,13 @@ else
     exit 1
 fi
 
+cat > "$APPDIR/AppRun" <<'APP_RUN_EOF'
+#!/bin/bash
+APPDIR="$(dirname "$(readlink -f "$0")")"
+exec "$APPDIR/usr/bin/Gestor_biblioteca" "$@"
+APP_RUN_EOF
+chmod +x "$APPDIR/AppRun"
+
 cat > "$APPDIR/gestor_biblioteca.desktop" <<EOF
 [Desktop Entry]
 Name=Gestor biblioteca
