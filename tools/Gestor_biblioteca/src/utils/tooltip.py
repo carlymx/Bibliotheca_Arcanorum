@@ -59,7 +59,7 @@ def _is_dark_theme():
         if theme != _THEME_CACHE:
             _THEME_CACHE = theme
             _IMAGE_CACHE.clear()
-        return theme == "sv-dark"
+        return "dark" in theme
     except Exception:
         return False
 
@@ -119,6 +119,18 @@ def make_btn(parent, icon, command, tooltip_text):
             kwargs["style"] = _EMOJI_STYLE
 
     btn = ttk.Button(parent, **kwargs)
+    btn._icon_key = icon
     btn.pack(side="left", padx=1)
     ToolTip(btn, tooltip_text)
     return btn
+
+
+def refresh_icons(parent):
+    _IMAGE_CACHE.clear()
+    for child in parent.winfo_children():
+        key = getattr(child, "_icon_key", None)
+        if key and key in _EMOJI_MAP:
+            name = _EMOJI_MAP[key]
+            img = _load_icon(name)
+            if img:
+                child.config(image=img)

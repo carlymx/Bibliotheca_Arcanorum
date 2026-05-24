@@ -15,7 +15,7 @@ from .scan_dialog import ScanReviewDialog
 from .portada_search_dialog import PortadaSearchDialog
 from .portada_mgr import (build_portada_index, find_missing_portadas,
                            resolve_portada_file, move_item, move_portada)
-from .utils.tooltip import ToolTip, make_btn
+from .utils.tooltip import ToolTip, make_btn, refresh_icons
 from .portadas_extract_dialog import PortadasExtractDialog
 from .path_setup_dialog import PathSetupDialog
 from .settings_view import DEFAULT_CONFIG, SettingsView, load_config, save_config
@@ -24,7 +24,7 @@ from .views.detail_view import DetailView
 from .views.help_view import HelpView
 
 
-VERSION = "0.8.1"
+VERSION = "0.8.2"
 
 
 class App:
@@ -121,18 +121,18 @@ class App:
         self.root.grid_columnconfigure(0, weight=1)
 
         # ── toolbar ──
-        toolbar = ttk.Frame(self.root)
-        toolbar.grid(row=0, column=0, sticky="ew", padx=2, pady=2)
+        self.toolbar = ttk.Frame(self.root)
+        self.toolbar.grid(row=0, column=0, sticky="ew", padx=2, pady=2)
 
-        make_btn(toolbar, "📝", self.nuevo_catalogo, "Nuevo catálogo (Ctrl+Shift+N)")
-        make_btn(toolbar, "📂", self.open_json, "Abrir biblioteca (Ctrl+O)")
-        make_btn(toolbar, "💾", self.save, "Guardar catálogo (Ctrl+S)")
-        ttk.Separator(toolbar, orient="vertical").pack(side="left", fill="y", padx=4)
-        make_btn(toolbar, "➕", self.add_item, "Añadir ficha (Ctrl+N)")
-        make_btn(toolbar, "🗑️", self.delete_item, "Eliminar ficha seleccionada")
-        ttk.Separator(toolbar, orient="vertical").pack(side="left", fill="y", padx=4)
-        make_btn(toolbar, "📁", self._nuevo_directorio, "Nuevo directorio")
-        make_btn(toolbar, "🚫", self._delete_dir_menu, "Eliminar directorio")
+        make_btn(self.toolbar, "📝", self.nuevo_catalogo, "Nuevo catálogo (Ctrl+Shift+N)")
+        make_btn(self.toolbar, "📂", self.open_json, "Abrir biblioteca (Ctrl+O)")
+        make_btn(self.toolbar, "💾", self.save, "Guardar catálogo (Ctrl+S)")
+        ttk.Separator(self.toolbar, orient="vertical").pack(side="left", fill="y", padx=4)
+        make_btn(self.toolbar, "➕", self.add_item, "Añadir ficha (Ctrl+N)")
+        make_btn(self.toolbar, "🗑️", self.delete_item, "Eliminar ficha seleccionada")
+        ttk.Separator(self.toolbar, orient="vertical").pack(side="left", fill="y", padx=4)
+        make_btn(self.toolbar, "📁", self._nuevo_directorio, "Nuevo directorio")
+        make_btn(self.toolbar, "🚫", self._delete_dir_menu, "Eliminar directorio")
 
         # ── notebook ──
         self.notebook = ttk.Notebook(self.root)
@@ -915,6 +915,7 @@ class App:
         self.detail_view.set_portadas_root(config.get("portadas_root", ""))
         self.detail_view.set_library_root(config.get("library_root", ""))
         self._apply_theme(config.get("theme", "default"))
+        refresh_icons(self.toolbar)
         self._update_status()
 
     def _apply_theme(self, name: str):
