@@ -75,8 +75,8 @@ if sys.platform == 'darwin':
         bundle_identifier='com.aquelarre.gestor-biblioteca',
         info_plist={
             'NSHighResolutionCapable': 'True',
-            'CFBundleShortVersionString': '0.8.0',
-            'CFBundleVersion': '0.8.0',
+            'CFBundleShortVersionString': '0.8.2',
+            'CFBundleVersion': '0.8.2',
         },
     )
 else:
