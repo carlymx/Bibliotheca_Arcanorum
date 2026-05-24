@@ -17,8 +17,13 @@ jobs:
           - os: windows-latest
             artifact-name: Gestor_biblioteca.exe
             build-script: scripts/build-windows.ps1
-          - os: macos-latest
-            artifact-name: Gestor_biblioteca.dmg
+          - os: macos-13
+            artifact-name: Gestor_biblioteca-x86_64.dmg
+            arch: x86_64
+            build-script: scripts/build-macos.sh
+          - os: macos-14
+            artifact-name: Gestor_biblioteca-arm64.dmg
+            arch: arm64
             build-script: scripts/build-macos.sh
 
     runs-on: ${{ matrix.os }}
@@ -39,6 +44,9 @@ jobs:
 
       - name: Run build script (Unix)
         if: runner.os != 'Windows'
+        env:
+          MACOS_ARCH: ${{ matrix.arch }}
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
         run: bash ${{ matrix.build-script }}
 
       - name: Run build script (Windows)
