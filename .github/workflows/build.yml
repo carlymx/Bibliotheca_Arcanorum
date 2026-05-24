@@ -17,7 +17,7 @@ jobs:
           - os: windows-latest
             artifact-name: Gestor_biblioteca.exe
             build-script: scripts/build-windows.ps1
-          - os: macos-13
+          - os: macos-14
             artifact-name: Gestor_biblioteca-x86_64.dmg
             arch: x86_64
             build-script: scripts/build-macos.sh
@@ -54,7 +54,18 @@ jobs:
         shell: pwsh
         run: ./scripts/build-windows.ps1
 
-      - uses: actions/upload-artifact@v6
+      - name: Upload Artifacts (Linux / Windows)
+        if: runner.os != 'macOS'
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact-name }}
           path: dist/${{ matrix.artifact-name }}
+
+      - name: Upload Artifacts (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: |
+            dist/${{ matrix.artifact-name }}
+            dist/Gestor_biblioteca-${{ matrix.arch }}.zip

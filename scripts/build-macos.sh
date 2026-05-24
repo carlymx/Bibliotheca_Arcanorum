@@ -38,3 +38,9 @@ create-dmg \
     --app-drop-link 420 120 \
     "dist/${DMG_NAME}" \
     "$APP"
+
+ZIP_NAME="Gestor_biblioteca-${ARCH}.zip"
+(
+    cd dist
+    zip -r "${ZIP_NAME}" Gestor_biblioteca.app
+)
