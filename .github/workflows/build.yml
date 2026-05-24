@@ -17,7 +17,7 @@ jobs:
           - os: windows-latest
             artifact-name: Gestor_biblioteca.exe
             build-script: scripts/build-windows.ps1
-          - os: macos-14
+          - os: macos-13
             artifact-name: Gestor_biblioteca-x86_64.dmg
             arch: x86_64
             build-script: scripts/build-macos.sh
