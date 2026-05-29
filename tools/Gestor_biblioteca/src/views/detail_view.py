@@ -19,7 +19,9 @@ _BATCH_FIELDS = [
       "documento", "info", "imagen", "mapa", "hoja_pj", "pantalla",
       "musica", "otro"]),
     ("edicion", "Edición", "combo",
-     ["1ª", "2ª", "3ª", "4ª", "indeterminada"]),
+     ["1ª", "2ª", "3ª", "4ª", "5ª", "6ª", "7ª", "8ª", "9ª", "10ª",
+      "11ª", "12ª", "13ª", "14ª", "15ª", "16ª", "17ª", "18ª", "19ª", "20ª",
+      "indeterminada"]),
     ("confianza", "Confianza", "combo",
      ["alta", "media", "baja"]),
     ("escaneado", "Escaneado", "check", None),
@@ -145,7 +147,10 @@ class DetailView(ttk.Frame):
 
         add_field("Nombre legible", "nombre_legible", "entry")
         add_field("Tipo", "tipo", "combo", ["manual", "suplemento", "campaña", "aventura", "revista", "documento", "info", "imagen", "mapa", "hoja_pj", "pantalla", "musica", "otro"])
-        add_field("Edición", "edicion", "combo", ["1ª", "2ª", "3ª", "4ª", "indeterminada"])
+        add_field("Edición", "edicion", "combo",
+                   ["1ª", "2ª", "3ª", "4ª", "5ª", "6ª", "7ª", "8ª", "9ª", "10ª",
+                    "11ª", "12ª", "13ª", "14ª", "15ª", "16ª", "17ª", "18ª", "19ª", "20ª",
+                    "indeterminada"])
         add_field("Confianza", "confianza", "combo", ["alta", "media", "baja"])
         add_field("Destino", "destino", "file_path", readonly=True)
 

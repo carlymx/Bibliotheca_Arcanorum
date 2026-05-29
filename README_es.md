@@ -64,6 +64,8 @@ El proyecto está diseñado para ser **independiente del juego**: aunque incluye
 - **Escáner de PDFs** — Escanea un árbol de directorios, detecta archivos nuevos, movidos, renombrados o eliminados; revisa los cambios antes de aplicarlos.
 - **Gestión de portadas** — Asocia portadas automáticamente, sube portadas personalizadas, extrae portadas de PDFs, archivos de audio (MP3, FLAC, OGG, M4A) e imágenes.
 - **Búsqueda de portadas** — Indexa portadas existentes y las enlaza automáticamente a las fichas correspondientes.
+- **Importar/Exportar** — Empaqueta y transfiere subconjuntos del catálogo con portadas y PDFs mediante formato `.bibliotex`.
+- **Borrado avanzado** — Eliminación de directorios con acciones configurables para fichas, PDFs, portadas y subdirectorios.
 - **Arrastrar y soltar** — Mueve fichas entre directorios visualmente en el árbol.
 - **Exportación JSON** — Genera `catalogo.js` listo para la web.
 - **Rotación de copias de seguridad** — Copias de seguridad rotativas automáticas del catálogo.
@@ -150,7 +152,7 @@ La app de escritorio genera un archivo `catalogo.js` que el catálogo web carga 
 ### Usar el gestor de escritorio
 
 **Opción A — Binarios precompilados (recomendado):**  
-Descarga la última versión para tu plataforma desde la página de [Releases](https://github.com/carlymx/Bibliotheca_Arcanorum/releases) — no necesitas instalar Python.
+Descarga la última versión para tu plataforma desde la página de [Releases](https://github.com/carlymx/BibliothecaArcanorum/releases) — no necesitas instalar Python.
 
 **Opción B — Ejecutar desde el código fuente:**
 

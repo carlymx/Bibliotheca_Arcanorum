@@ -14,12 +14,14 @@ class ListView(ttk.Frame):
         on_dir_select: Callable[[Optional[str]], None] = None,
         on_item_dropped: Callable[[List[Item], str], None] = None,
         on_visibility_changed: Callable[[], None] = None,
+        on_export_request: Callable[[List[Item]], None] = None,
     ):
         super().__init__(parent)
         self.on_item_select = on_item_select
         self.on_dir_select = on_dir_select
         self.on_item_dropped = on_item_dropped
         self.on_visibility_changed = on_visibility_changed
+        self.on_export_request = on_export_request
 
         self.items: List[Item] = []
         self.dir_visible: Dict[str, bool] = {}
@@ -73,6 +75,18 @@ class ListView(ttk.Frame):
         self.tree.bind("<B1-Motion>", self._on_motion, add="+")
         self.tree.bind("<ButtonRelease-1>", self._on_release, add="+")
         self.tree.bind("<Leave>", self._on_leave, add="+")
+        self.tree.bind("<Button-3>", self._on_context_menu, add="+")
+
+        self._context_menu = tk.Menu(self, tearoff=0)
+        self._context_menu.add_command(
+            label="Exportar fichas seleccionadas",
+            command=self._export_selected,
+        )
+        self._context_menu.add_command(
+            label="Exportar directorio",
+            command=self._export_dir,
+        )
+        self.tree.bind("<Button-1>", self._close_context_menu, add="+")
 
     # ── helpers ────────────────────────────────────────────
 
@@ -202,6 +216,24 @@ class ListView(ttk.Frame):
                     tags=("_item",),
                 )
 
+        # Render root-level items (sin destino)
+        for idx in by_dir.get("", []):
+            item = self.items[idx]
+            portada_icon = "✅" if item.has_portada() else "⬜"
+            oculto_icon = "⬜" if item.oculto else "✅"
+            iid = self._item_iid(idx)
+            self._item_idx[iid] = idx
+
+            if search_query and not self._item_matches(item, search_query):
+                continue
+
+            self.tree.insert(
+                "__root__", "end", iid=iid,
+                text=f"📄 {item.display_name()}",
+                values=(portada_icon, oculto_icon),
+                tags=("_item",),
+            )
+
         if search_query:
             for dir_path in matching_dirs:
                 if dir_path and self.tree.exists(dir_path):
@@ -328,6 +360,13 @@ class ListView(ttk.Frame):
                 result.append(item)
         return result
 
+    def get_selected_dirs(self) -> List[str]:
+        result = []
+        for iid in self.tree.selection():
+            if self._is_dir_node(iid) and iid != "__root__":
+                result.append(iid)
+        return result
+
     # ── drag & drop ────────────────────────────────────────
 
     def _on_click(self, event):
@@ -418,3 +457,58 @@ class ListView(ttk.Frame):
             except tk.TclError:
                 pass
             self._last_hover_node = None
+
+    # ── context menu ─────────────────────────────────────
+
+    def _close_context_menu(self, event=None):
+        try:
+            self._context_menu.unpost()
+        except tk.TclError:
+            pass
+
+    def _on_context_menu(self, event):
+        node = self.tree.identify_row(event.y)
+        if not node:
+            return
+        self._context_node = node
+        self._context_items = []
+        self._context_dir = None
+
+        if self._is_item_node(node):
+            self._context_items = self.get_selected_items()
+            self._context_menu.entryconfigure("Exportar directorio", state="disabled")
+            state = "normal" if self._context_items else "disabled"
+            self._context_menu.entryconfigure("Exportar fichas seleccionadas", state=state)
+        elif self._is_dir_node(node) and node != "__root__":
+            self._context_dir = node
+            sel_dirs = [n for n in self.tree.selection()
+                        if self._is_dir_node(n) and n != "__root__"]
+            if node not in sel_dirs:
+                sel_dirs = [node]
+            dir_items = []
+            for nd in sel_dirs:
+                nd_stripped = nd.rstrip("/")
+                for it in self.items:
+                    if not it.destino:
+                        continue
+                    d = it.destino.rstrip("/")
+                    if d == nd_stripped or d.startswith(nd_stripped + "/"):
+                        if it not in dir_items:
+                            dir_items.append(it)
+            self._context_items = dir_items
+            state = "normal" if dir_items else "disabled"
+            self._context_menu.entryconfigure("Exportar directorio", state=state)
+            self._context_menu.entryconfigure("Exportar fichas seleccionadas", state="disabled")
+        else:
+            self._context_menu.entryconfigure("Exportar directorio", state="disabled")
+            self._context_menu.entryconfigure("Exportar fichas seleccionadas", state="disabled")
+
+        self._context_menu.post(event.x_root, event.y_root)
+
+    def _export_selected(self):
+        if self.on_export_request and self._context_items:
+            self.on_export_request(self._context_items)
+
+    def _export_dir(self):
+        if self.on_export_request and self._context_items:
+            self.on_export_request(self._context_items)

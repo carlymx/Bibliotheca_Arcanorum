@@ -64,6 +64,8 @@ The project is designed to be **game-agnostic**: while it includes a dedicated t
 - **PDF scanner** — Scan a directory tree, detect new/moved/renamed/deleted files, review changes before applying.
 - **Cover management** — Auto-associate cover images, upload custom covers, extract covers from PDFs, audio files (MP3, FLAC, OGG, M4A), and image files.
 - **Cover search** — Index existing covers and auto-link them to matching items.
+- **Import/Export** — Package and transfer catalog subsets with covers and PDFs via `.bibliotex` format.
+- **Advanced deletion** — Per-directory deletion with configurable actions for entries, PDFs, covers, and subdirectories.
 - **Drag & drop** — Move items between directories visually in the tree.
 - **JSON export** — Generates `catalogo.js` ready for the web.
 - **Backup rotation** — Automatic rotating backups of your catalog JSON.

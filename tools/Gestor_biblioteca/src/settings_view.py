@@ -19,6 +19,22 @@ DEFAULT_CONFIG = {
     "theme": "default",
     "nombre_biblioteca": "",
     "recent_libraries": [],
+    "export_formato_default": "json",
+    "export_incluir_portadas": False,
+    "export_incluir_pdfs": False,
+    "import_comportamiento_default": "saltar",
+    "import_carpeta_default": "Importados",
+    "import_modo_destino_default": "estructura",
+    "delete_defaults": {
+        "item": {"borrar_pdf": False, "borrar_portada": False},
+        "dir": {
+            "accion_fichas": "subir",
+            "accion_pdfs": "mover",
+            "accion_portadas": "mover",
+            "accion_subdirectorios": "heredar",
+            "accion_mantenidos": "mover_a_raiz",
+        },
+    },
 }
 
 
@@ -119,6 +135,8 @@ class SettingsView(ttk.Frame):
         self._build_backup_section(parent)
         self._build_drag_section(parent)
         self._build_theme_section(parent)
+        self._build_import_export_section(parent)
+        self._build_delete_section(parent)
 
         ttk.Separator(parent, orient="horizontal").pack(fill="x", **pad)
 
@@ -252,6 +270,171 @@ class SettingsView(ttk.Frame):
         else:
             self._theme_preview.config(text="")
 
+    def _build_import_export_section(self, parent):
+        pad = {"padx": 10, "pady": 5}
+        frame = ttk.LabelFrame(parent, text="Importar / Exportar", padding=10)
+        frame.pack(fill="x", padx=10, pady=5)
+
+        ttk.Label(frame, text="Exportación", font=("", 10, "bold")).pack(anchor="w")
+
+        row1 = ttk.Frame(frame)
+        row1.pack(fill="x", pady=(5, 2))
+        ttk.Label(row1, text="Formato por defecto:", width=25, anchor="w").pack(side="left")
+        self._export_formato_var = tk.StringVar(
+            value=self.config_data.get("export_formato_default", DEFAULT_CONFIG["export_formato_default"])
+        )
+        ttk.Combobox(
+            row1,
+            textvariable=self._export_formato_var,
+            values=["json", "zip"],
+            state="readonly",
+            width=12,
+        ).pack(side="left")
+
+        row2 = ttk.Frame(frame)
+        row2.pack(fill="x", pady=2)
+        self._export_portadas_var = tk.BooleanVar(
+            value=self.config_data.get("export_incluir_portadas", DEFAULT_CONFIG["export_incluir_portadas"])
+        )
+        ttk.Checkbutton(
+            row2, text="Incluir portadas por defecto",
+            variable=self._export_portadas_var,
+        ).pack(anchor="w", padx=(25, 0))
+
+        row3 = ttk.Frame(frame)
+        row3.pack(fill="x", pady=2)
+        self._export_pdfs_var = tk.BooleanVar(
+            value=self.config_data.get("export_incluir_pdfs", DEFAULT_CONFIG["export_incluir_pdfs"])
+        )
+        ttk.Checkbutton(
+            row3, text="Incluir PDFs por defecto",
+            variable=self._export_pdfs_var,
+        ).pack(anchor="w", padx=(25, 0))
+
+        ttk.Separator(frame, orient="horizontal").pack(fill="x", pady=8)
+
+        ttk.Label(frame, text="Importación", font=("", 10, "bold")).pack(anchor="w")
+
+        row4 = ttk.Frame(frame)
+        row4.pack(fill="x", pady=(5, 2))
+        ttk.Label(row4, text="Comportamiento con duplicados:", width=25, anchor="w").pack(side="left")
+        self._import_dup_var = tk.StringVar(
+            value=self.config_data.get("import_comportamiento_default", DEFAULT_CONFIG["import_comportamiento_default"])
+        )
+        ttk.Combobox(
+            row4,
+            textvariable=self._import_dup_var,
+            values=["saltar", "sobrescribir", "importar_todos"],
+            state="readonly",
+            width=15,
+        ).pack(side="left")
+
+        row5 = ttk.Frame(frame)
+        row5.pack(fill="x", pady=2)
+        ttk.Label(row5, text="Modo destino:", width=25, anchor="w").pack(side="left")
+        self._import_modo_var = tk.StringVar(
+            value=self.config_data.get("import_modo_destino_default", DEFAULT_CONFIG["import_modo_destino_default"])
+        )
+        ttk.Combobox(
+            row5,
+            textvariable=self._import_modo_var,
+            values=["estructura", "carpeta_fija"],
+            state="readonly",
+            width=15,
+        ).pack(side="left")
+
+        row6 = ttk.Frame(frame)
+        row6.pack(fill="x", pady=2)
+        ttk.Label(row6, text="Carpeta por defecto:", width=25, anchor="w").pack(side="left")
+        self._import_carpeta_var = tk.StringVar(
+            value=self.config_data.get("import_carpeta_default", DEFAULT_CONFIG["import_carpeta_default"])
+        )
+        ttk.Entry(row6, textvariable=self._import_carpeta_var, width=20).pack(side="left")
+
+    def _build_delete_section(self, parent):
+        frame = ttk.LabelFrame(parent, text="Eliminación", padding=10)
+        frame.pack(fill="x", padx=10, pady=5)
+
+        delete_defaults = self.config_data.get("delete_defaults", DEFAULT_CONFIG["delete_defaults"])
+
+        ttk.Label(frame, text="Al eliminar una ficha", font=("", 10, "bold")).pack(anchor="w")
+        item_def = delete_defaults.get("item", {})
+        self._del_item_pdf_var = tk.BooleanVar(
+            value=item_def.get("borrar_pdf", False)
+        )
+        self._del_item_portada_var = tk.BooleanVar(
+            value=item_def.get("borrar_portada", False)
+        )
+        ttk.Checkbutton(
+            frame, text="Borrar PDF por defecto",
+            variable=self._del_item_pdf_var,
+        ).pack(anchor="w", padx=(15, 0), pady=2)
+        ttk.Checkbutton(
+            frame, text="Borrar portada por defecto",
+            variable=self._del_item_portada_var,
+        ).pack(anchor="w", padx=(15, 0), pady=2)
+
+        ttk.Separator(frame, orient="horizontal").pack(fill="x", pady=8)
+
+        ttk.Label(frame, text="Al eliminar un directorio", font=("", 10, "bold")).pack(anchor="w")
+        dir_def = delete_defaults.get("dir", {})
+
+        sub = ttk.Frame(frame)
+        sub.pack(fill="x", padx=(15, 0), pady=4)
+        ttk.Label(sub, text="Fichas:", width=14, anchor="w").pack(side="left")
+        self._del_dir_fichas_var = tk.StringVar(
+            value=dir_def.get("accion_fichas", "subir")
+        )
+        ttk.Combobox(
+            sub, textvariable=self._del_dir_fichas_var,
+            values=["subir", "eliminar"], state="readonly", width=14,
+        ).pack(side="left")
+
+        sub2 = ttk.Frame(frame)
+        sub2.pack(fill="x", padx=(15, 0), pady=4)
+        ttk.Label(sub2, text="PDFs:", width=14, anchor="w").pack(side="left")
+        self._del_dir_pdfs_var = tk.StringVar(
+            value=dir_def.get("accion_pdfs", "mover")
+        )
+        ttk.Combobox(
+            sub2, textvariable=self._del_dir_pdfs_var,
+            values=["mover", "borrar", "mantener"], state="readonly", width=14,
+        ).pack(side="left")
+
+        sub3 = ttk.Frame(frame)
+        sub3.pack(fill="x", padx=(15, 0), pady=4)
+        ttk.Label(sub3, text="Portadas:", width=14, anchor="w").pack(side="left")
+        self._del_dir_portadas_var = tk.StringVar(
+            value=dir_def.get("accion_portadas", "mover")
+        )
+        ttk.Combobox(
+            sub3, textvariable=self._del_dir_portadas_var,
+            values=["mover", "borrar", "mantener"], state="readonly", width=14,
+        ).pack(side="left")
+
+        sub4 = ttk.Frame(frame)
+        sub4.pack(fill="x", padx=(15, 0), pady=4)
+        ttk.Label(sub4, text="Subdirectorios:", width=14, anchor="w").pack(side="left")
+        self._del_dir_subdirs_var = tk.StringVar(
+            value=dir_def.get("accion_subdirectorios", "heredar")
+        )
+        ttk.Combobox(
+            sub4, textvariable=self._del_dir_subdirs_var,
+            values=["heredar", "eliminar_todo", "solo_limpiar", "mantener_intactos"],
+            state="readonly", width=18,
+        ).pack(side="left")
+
+        sub5 = ttk.Frame(frame)
+        sub5.pack(fill="x", padx=(15, 0), pady=4)
+        ttk.Label(sub5, text="Mantenidos:", width=14, anchor="w").pack(side="left")
+        self._del_dir_mant_var = tk.StringVar(
+            value=dir_def.get("accion_mantenidos", "mover_a_raiz")
+        )
+        ttk.Combobox(
+            sub5, textvariable=self._del_dir_mant_var,
+            values=["mover_a_raiz", "no_borrar"], state="readonly", width=14,
+        ).pack(side="left")
+
     def _browse_js_path(self):
         path = filedialog.asksaveasfilename(
             title="Seleccionar ruta de catalogo.js",
@@ -286,6 +469,26 @@ class SettingsView(ttk.Frame):
             config["backup_count"] = DEFAULT_CONFIG["backup_count"]
         config["mover_items_fisicamente"] = self._mover_var.get()
         config["theme"] = self._theme_var.get()
+        config["export_formato_default"] = self._export_formato_var.get()
+        config["export_incluir_portadas"] = self._export_portadas_var.get()
+        config["export_incluir_pdfs"] = self._export_pdfs_var.get()
+        config["import_comportamiento_default"] = self._import_dup_var.get()
+        config["import_modo_destino_default"] = self._import_modo_var.get()
+        config["import_carpeta_default"] = self._import_carpeta_var.get().strip() or "Importados"
+
+        config["delete_defaults"] = {
+            "item": {
+                "borrar_pdf": self._del_item_pdf_var.get(),
+                "borrar_portada": self._del_item_portada_var.get(),
+            },
+            "dir": {
+                "accion_fichas": self._del_dir_fichas_var.get(),
+                "accion_pdfs": self._del_dir_pdfs_var.get(),
+                "accion_portadas": self._del_dir_portadas_var.get(),
+                "accion_subdirectorios": self._del_dir_subdirs_var.get(),
+                "accion_mantenidos": self._del_dir_mant_var.get(),
+            },
+        }
 
         missing = []
         for key, label in [("library_root", "Ruta biblioteca"), ("portadas_root", "Ruta portadas"), ("web_root", "Ruta web")]:
@@ -319,6 +522,22 @@ class SettingsView(ttk.Frame):
         self._mover_var.set(DEFAULT_CONFIG.get("mover_items_fisicamente", True))
         self._theme_var.set(DEFAULT_CONFIG["theme"])
         self._update_theme_preview()
+        self._export_formato_var.set(DEFAULT_CONFIG["export_formato_default"])
+        self._export_portadas_var.set(DEFAULT_CONFIG["export_incluir_portadas"])
+        self._export_pdfs_var.set(DEFAULT_CONFIG["export_incluir_pdfs"])
+        self._import_dup_var.set(DEFAULT_CONFIG["import_comportamiento_default"])
+        self._import_modo_var.set(DEFAULT_CONFIG["import_modo_destino_default"])
+        self._import_carpeta_var.set(DEFAULT_CONFIG["import_carpeta_default"])
+
+        dd = DEFAULT_CONFIG["delete_defaults"]
+        self._del_item_pdf_var.set(dd["item"]["borrar_pdf"])
+        self._del_item_portada_var.set(dd["item"]["borrar_portada"])
+        self._del_dir_fichas_var.set(dd["dir"]["accion_fichas"])
+        self._del_dir_pdfs_var.set(dd["dir"]["accion_pdfs"])
+        self._del_dir_portadas_var.set(dd["dir"]["accion_portadas"])
+        self._del_dir_subdirs_var.set(dd["dir"]["accion_subdirectorios"])
+        self._del_dir_mant_var.set(dd["dir"]["accion_mantenidos"])
+
         self.status_label.config(text="")
 
     def set_fields_from_config(self, config: dict):

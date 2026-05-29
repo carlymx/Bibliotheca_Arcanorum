@@ -52,11 +52,14 @@ class HelpView(ttk.Frame):
             ("➕  Añadir ficha (Ctrl+N)",
              "Crea una ficha vacía en el catálogo."),
             ("🗑️  Eliminar ficha",
-             "Elimina la ficha seleccionada del catálogo (no borra archivos en disco)."),
+             "Elimina la ficha seleccionada del catálogo. Muestra un diálogo para elegir "
+             "si se borran también el PDF y la portada del disco."),
             ("📁  Nuevo directorio",
              "Crea un nuevo directorio en la biblioteca y en portadas."),
             ("🚫  Eliminar directorio",
-             "Elimina un directorio del catálogo y del disco. Los items se mueven a raíz."),
+             "Elimina un directorio del catálogo y del disco. Muestra un diálogo con "
+             "opciones avanzadas: subir o eliminar fichas, mover/borrar/mantener PDFs "
+             "y portadas, y cómo tratar subdirectorios."),
         ]
 
         for title, desc in toolbar_help:
@@ -65,7 +68,7 @@ class HelpView(ttk.Frame):
         ttk.Separator(scrollable, orient="horizontal").pack(fill="x", padx=20, pady=10)
 
         # ── Menú ──
-        menu_frame = ttk.LabelFrame(scrollable, text="Menú de Herramientas", padding=12)
+        menu_frame = ttk.LabelFrame(scrollable, text="Menú Archivo y Herramientas", padding=12)
         menu_frame.pack(fill="x", padx=20, pady=(0, 10))
 
         menu_help = [
@@ -88,12 +91,25 @@ class HelpView(ttk.Frame):
              "Crea un nuevo directorio tanto en el sistema de archivos como en el "
              "catálogo. Pide el nombre y crea la carpeta en library_root y portadas_root."),
             ("Directorios → Eliminar directorio",
-             "Elimina un directorio del catálogo y del disco. Los items contenidos "
-             "se mueven a la raíz. Muestra un listado numerado para elegir."),
+             "Elimina un directorio del catálogo y del disco. Abre un diálogo con "
+             "opciones para fichas (subir/eliminar), PDFs (mover/borrar/mantener), "
+             "portadas (mover/borrar/mantener) y subdirectorios (heredar/eliminar_todo/"
+             "solo_limpiar/mantener_intactos).\n\n"
+             "Si se seleccionan varios directorios, el diálogo se omite y se aplican "
+             "los defaults configurados."),
             ("Fichas → Añadir ficha (Ctrl+N)",
              "Añade una ficha vacía con valores por defecto."),
             ("Fichas → Eliminar ficha",
-             "Elimina la ficha seleccionada del catálogo. No borra archivos en disco."),
+             "Elimina la ficha seleccionada del catálogo. Muestra un diálogo para decidir "
+             "si se borra también el PDF y/o la portada del disco."),
+            ("Exportar fichas... (Ctrl+Shift+E)",
+             "Empaqueta fichas seleccionadas o todo el catálogo en un archivo "
+             "`.bibliotex` (JSON) o `.bibliotex.zip` (incluye portadas y PDFs). "
+             "Permite elegir formato, incluir portadas/PDFs, y cifrar con contraseña."),
+            ("Importar fichas... (Ctrl+Shift+I)",
+             "Importa fichas desde un archivo `.bibliotex` o `.bibliotex.zip`. "
+             "Detecta duplicados por hash y permite sobrescribir, saltar o añadir. "
+             "Extrae PDFs y portadas a los directorios correspondientes."),
         ]
 
         for title, desc in menu_help:
@@ -133,7 +149,7 @@ class HelpView(ttk.Frame):
              "musica = Bandas sonoras o música ambiental para partidas.\n"
              "otro = Cualquier otra cosa que no encaje en todas las anteriores."),
             ("Edición",
-             "Indica la edición del material. Puede ser 1ª, 2ª, 3ª, 4ª o indeterminada. "
+             "Indica la edición del material. Puede ser 1ª a 20ª, o indeterminada. "
              "Ayuda a filtrar y ordenar el catálogo por versiones."),
             ("Confianza",
              "Nivel de fiabilidad de los metadatos de la ficha:\n\n"
@@ -216,6 +232,17 @@ class HelpView(ttk.Frame):
             ("Copias de seguridad",
              "Al abrir un archivo JSON se crea una copia de seguridad rotatoria.\n"
              "Pon 0 para deshabilitar."),
+            ("Defaults de borrado",
+             "Configura los valores por defecto del diálogo de eliminación.\n\n"
+             "Al eliminar una ficha: elegir si borrar PDF y portada por defecto.\n\n"
+             "Al eliminar un directorio:\n"
+             "  • Fichas: subir a raíz o eliminar del catálogo.\n"
+             "  • PDFs: mover a raíz, borrar o mantener.\n"
+             "  • Portadas: mover a raíz, borrar o mantener.\n"
+             "  • Subdirectorios: heredar acción principal, eliminar todo,\n"
+             "    solo limpiar (borrar fichas pero dejar PDFs/portadas),\n"
+             "    o mantener intactos (mover subdirectorios a raíz).\n"
+             "  • Mantenidos: mover archivos a raíz o no borrar el directorio."),
         ]
 
         for title, desc in config_help:
@@ -233,6 +260,8 @@ class HelpView(ttk.Frame):
             ("Ctrl+B", "Buscar cambios"),
             ("Ctrl+N", "Añadir ficha vacía"),
             ("Ctrl+Shift+N", "Nuevo catálogo"),
+            ("Ctrl+Shift+E", "Exportar fichas"),
+            ("Ctrl+Shift+I", "Importar fichas"),
         ]
 
         grid = ttk.Frame(shortcut_frame)

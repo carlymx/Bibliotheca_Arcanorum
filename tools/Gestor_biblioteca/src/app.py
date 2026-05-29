@@ -18,13 +18,17 @@ from .portada_mgr import (build_portada_index, find_missing_portadas,
 from .utils.tooltip import ToolTip, make_btn, refresh_icons
 from .portadas_extract_dialog import PortadasExtractDialog
 from .path_setup_dialog import PathSetupDialog
+from .export_dialog import ExportDialog
+from .import_dialog import ImportDialog
+from .io_pack import BibliotexError
 from .settings_view import DEFAULT_CONFIG, SettingsView, load_config, save_config
 from .views.list_view import ListView
 from .views.detail_view import DetailView
 from .views.help_view import HelpView
+from .delete_dialog import DeleteItemDialog, DeleteDirDialog, DeleteDirResult
 
 
-VERSION = "0.8.2"
+VERSION = "0.9.2"
 
 
 class App:
@@ -63,6 +67,8 @@ class App:
         self.root.bind("<Control-n>", lambda e: self.add_item())
         self.root.bind("<Control-Shift-n>", lambda e: self.nuevo_catalogo())
         self.root.bind("<Control-b>", lambda e: self.buscar_cambios())
+        self.root.bind("<Control-Shift-e>", lambda e: self._export_items())
+        self.root.bind("<Control-Shift-i>", lambda e: self._import_items())
 
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self._update_status()
@@ -82,6 +88,9 @@ class App:
         file_menu.add_command(label="Guardar", command=self.save, accelerator="Ctrl+S")
         file_menu.add_command(label="Guardar como...", command=self.save_as)
         file_menu.add_command(label="Cerrar catálogo", command=self.cerrar_catalogo)
+        file_menu.add_separator()
+        file_menu.add_command(label="Exportar fichas...", command=self._export_items, accelerator="Ctrl+Shift+E")
+        file_menu.add_command(label="Importar fichas...", command=self._import_items, accelerator="Ctrl+Shift+I")
         file_menu.add_separator()
         file_menu.add_command(label="Exportar para la web", command=self._export_for_web)
         file_menu.add_separator()
@@ -150,6 +159,7 @@ class App:
             on_dir_select=self._on_dir_selected,
             on_item_dropped=self._on_item_dropped,
             on_visibility_changed=self._mark_dirty,
+            on_export_request=self._export_items,
         )
         paned.add(self.list_view, weight=1)
 
@@ -342,6 +352,47 @@ class App:
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo guardar:\n{e}")
 
+    def _export_items(self, items: Optional[list[Item]] = None):
+        if items is None:
+            items = self.items
+        if not items:
+            messagebox.showinfo("Exportar", "No hay fichas para exportar.")
+            return
+
+        ExportDialog(
+            self.root,
+            items=items,
+            config=self.config,
+            on_export_done=lambda path: self.status_msg.config(
+                text=f"Exportadas {len(items)} fichas a {path}"
+            ),
+        )
+
+    def _import_items(self, filepath: str = ""):
+        ImportDialog(
+            self.root,
+            existing_items=self.items,
+            config=self.config,
+            on_import_done=self._on_import_complete,
+            initial_path=filepath,
+        )
+
+    def _on_import_complete(self, result):
+        parts = []
+        if result.importados:
+            self.items.extend(result.importados)
+            parts.append(f"+{len(result.importados)} importados")
+        if result.sobrescritos:
+            parts.append(f"~{len(result.sobrescritos)} sobrescritos")
+        if result.saltados:
+            parts.append(f"-{len(result.saltados)} saltados")
+        if result.pdfs_faltantes:
+            parts.append(f"⚠ {len(result.pdfs_faltantes)} PDFs faltantes")
+        self.list_view.set_items(self.items, self.dir_visible, self.directorios)
+        self._mark_dirty()
+        self._update_status()
+        self.status_msg.config(text="Importación: " + (", ".join(parts) if parts else "Sin cambios"))
+
     def save_as(self):
         path = filedialog.asksaveasfilename(
             title="Guardar JSON como...",
@@ -357,6 +408,10 @@ class App:
 
     def add_item(self):
         item = Item()
+        item.nombre_legible = "Ficha Nueva"
+        selected_dirs = self.list_view.get_selected_dirs()
+        if selected_dirs:
+            item.destino = selected_dirs[0].rstrip("/") + "/"
         self.items.append(item)
         self.list_view.set_items(self.items, self.dir_visible, self.directorios)
         self.list_view.select_item(item)
@@ -370,22 +425,47 @@ class App:
         if not selected:
             messagebox.showinfo("Eliminar", "Selecciona una o varias fichas primero.")
             return
-        n = len(selected)
-        label = "esta ficha" if n == 1 else f"estas {n} fichas"
-        if not messagebox.askyesno(
-            "Confirmar eliminación",
-            f"¿Eliminar {label}?\n"
-            "El archivo PDF y la portada NO se borrarán del disco.",
-        ):
+
+        item_defaults = self.config.get("delete_defaults", {}).get("item", {})
+        dialog = DeleteItemDialog(self.root, len(selected), item_defaults)
+        result = dialog.result
+        if result is None:
             return
+
+        library_root = self.config.get("library_root", "")
+        portadas_root = self.config.get("portadas_root", "")
+
         for item in selected:
+            if result.borrar_pdf and item.nombre_legible and library_root and item.destino:
+                pdf_path = Path(library_root) / item.destino.rstrip("/") / item.nombre_legible
+                if pdf_path.exists():
+                    pdf_path.unlink()
+
+            if result.borrar_portada and portadas_root and item.nombre_legible:
+                portada_path = resolve_portada_file(
+                    portadas_root, item.destino, Path(item.nombre_legible).stem)
+                if portada_path and portada_path.exists():
+                    portada_path.unlink()
+                    item.portada = ""
+
             if item in self.items:
                 self.items.remove(item)
+
+        if result.guardar_default:
+            self.config.setdefault("delete_defaults", {})
+            self.config["delete_defaults"]["item"] = {
+                "borrar_pdf": result.borrar_pdf,
+                "borrar_portada": result.borrar_portada,
+            }
+            save_config(self.config)
+
         self.list_view.set_items(self.items, self.dir_visible, self.directorios)
         self.detail_view.load_items([])
         self._mark_dirty()
         self._update_status()
-        self.status_msg.config(text=f"{n} ficha(s) eliminada(s). Total: {len(self.items)} items")
+        self.status_msg.config(
+            text=f"{len(selected)} ficha(s) eliminada(s). Total: {len(self.items)} items"
+        )
 
     def _run_scan(self, library_root, existing_items, on_complete_cb):
         self._scan_cancel_event.clear()
@@ -780,33 +860,218 @@ class App:
         self.status_msg.config(text=f"Directorio renombrado: '{old_name}' → '{new_name}'")
 
     def _on_dir_delete(self, dir_name: str):
+        dir_defaults = self.config.get("delete_defaults", {}).get("dir", {})
+        dialog = DeleteDirDialog(self.root, [dir_name], dir_defaults)
+        opts = dialog.result
+        if opts is None:
+            return
+
+        self._apply_dir_delete([dir_name], opts)
+        self.status_msg.config(text=f"Directorio eliminado: '{dir_name}'")
+
+    def _apply_dir_delete(self, dirs: list, opts: DeleteDirResult):
+        for d in dirs:
+            self._delete_single_dir(d, opts)
+
+        self.list_view.set_items(self.items, self.dir_visible, self.directorios)
+        self.detail_view.load_items([])
+
+        if opts.guardar_default:
+            self.config.setdefault("delete_defaults", {})
+            self.config["delete_defaults"]["dir"] = {
+                "accion_fichas": opts.accion_fichas,
+                "accion_pdfs": opts.accion_pdfs,
+                "accion_portadas": opts.accion_portadas,
+                "accion_subdirectorios": opts.accion_subdirectorios,
+                "accion_mantenidos": opts.accion_mantenidos,
+            }
+            save_config(self.config)
+
+        self._mark_dirty()
+        self._update_status()
+
+    def _delete_single_dir(self, dir_name: str, opts: DeleteDirResult):
         dir_name = dir_name.rstrip("/")
-        for item in self.items:
-            if item.destino and item.destino.rstrip("/") == dir_name:
-                item.destino = ""
-            elif item.destino and item.destino.startswith(dir_name + "/"):
-                item.destino = item.destino[len(dir_name) + 1:]
+        library_root = self.config.get("library_root", "")
+        portadas_root = self.config.get("portadas_root", "")
+        web_root = self.config.get("web_root", "")
+
+        # Recolectar items según alcance
+        is_mantener_intactos = opts.accion_subdirectorios == "mantener_intactos"
+        scope_items = []
+        for it in self.items:
+            if not it.destino:
+                continue
+            d = it.destino.rstrip("/")
+            if d == dir_name:
+                scope_items.append(it)
+            elif not is_mantener_intactos and d.startswith(dir_name + "/"):
+                scope_items.append(it)
+
+        items_to_remove = []
+
+        for item in scope_items:
+            old_destino = item.destino.rstrip("/") if item.destino else ""
+            is_direct = old_destino == dir_name
+            in_subdir = (not is_direct) and old_destino.startswith(dir_name + "/")
+
+            # Acciones efectivas según origen del item
+            if in_subdir:
+                sd_opt = opts.accion_subdirectorios
+                if sd_opt == "eliminar_todo":
+                    eff_fichas, eff_pdfs, eff_portadas = "eliminar", "borrar", "borrar"
+                elif sd_opt == "solo_limpiar":
+                    eff_fichas, eff_pdfs, eff_portadas = "eliminar", "mantener", "mantener"
+                else:  # heredar
+                    eff_fichas, eff_pdfs, eff_portadas = (
+                        opts.accion_fichas, opts.accion_pdfs, opts.accion_portadas)
+            else:
+                eff_fichas = opts.accion_fichas
+                eff_pdfs = opts.accion_pdfs
+                eff_portadas = opts.accion_portadas
+
+            # Nuevo destino tras subir un nivel
+            if eff_fichas == "subir":
+                if is_direct:
+                    new_destino = ""
+                else:
+                    new_destino = item.destino[len(dir_name) + 1:]
+            else:
+                new_destino = None
+
+            # Gestionar archivos
+            self._delete_item_files(
+                item, old_destino, new_destino,
+                eff_pdfs, eff_portadas,
+                library_root, portadas_root, web_root,
+            )
+
+            # Catálogo
+            if eff_fichas == "eliminar":
+                items_to_remove.append(item)
+            else:
+                item.destino = new_destino
+
+        for item in items_to_remove:
+            if item in self.items:
+                self.items.remove(item)
+
+        # Subdirectorios «mantener intactos» — ajustar destinos y mover físicamente
+        if opts.accion_subdirectorios == "mantener_intactos":
+            for it in self.items:
+                if it.destino and it.destino.startswith(dir_name + "/"):
+                    it.destino = it.destino[len(dir_name) + 1:]
+            if library_root:
+                dpath = Path(library_root) / dir_name
+                if dpath.exists():
+                    for child in list(dpath.iterdir()):
+                        if child.is_dir():
+                            target = Path(library_root) / child.name
+                            if not target.exists():
+                                shutil.move(str(child), str(target))
+            if portadas_root:
+                pdir = Path(portadas_root) / dir_name
+                if pdir.exists():
+                    for child in list(pdir.iterdir()):
+                        if child.is_dir():
+                            target = Path(portadas_root) / child.name
+                            if not target.exists():
+                                shutil.move(str(child), str(target))
+
+        # Limpieza física
+        has_mantener = (opts.accion_pdfs == "mantener" or opts.accion_portadas == "mantener")
+
+        if has_mantener and opts.accion_mantenidos == "mover_a_raiz":
+            self._move_files_to_root(dir_name, library_root, portadas_root)
+            if library_root:
+                dpath = Path(library_root) / dir_name
+                if dpath.exists():
+                    shutil.rmtree(str(dpath), ignore_errors=True)
+            if portadas_root:
+                pdir = Path(portadas_root) / dir_name
+                if pdir.exists():
+                    shutil.rmtree(str(pdir), ignore_errors=True)
+        elif not (has_mantener and opts.accion_mantenidos == "no_borrar"):
+            if library_root:
+                dpath = Path(library_root) / dir_name
+                if dpath.exists():
+                    shutil.rmtree(str(dpath), ignore_errors=True)
+            if portadas_root:
+                pdir = Path(portadas_root) / dir_name
+                if pdir.exists():
+                    shutil.rmtree(str(pdir), ignore_errors=True)
 
         self.directorios.discard(dir_name)
         self.dir_visible.pop(dir_name, None)
 
-        library_root = self.config.get("library_root", "")
+    def _move_files_to_root(self, dir_name, library_root, portadas_root):
         if library_root:
-            dir_path = Path(library_root) / dir_name
-            if dir_path.exists():
-                shutil.rmtree(str(dir_path), ignore_errors=True)
-
-        portadas_root = self.config.get("portadas_root", "")
+            dpath = Path(library_root) / dir_name
+            if dpath.exists():
+                for f in list(dpath.iterdir()):
+                    if f.is_file():
+                        target = Path(library_root) / f.name
+                        counter = 1
+                        while target.exists():
+                            target = Path(library_root) / f"{f.stem}_{counter}{f.suffix}"
+                            counter += 1
+                        shutil.move(str(f), str(target))
+                try:
+                    dpath.rmdir()
+                except OSError:
+                    pass
         if portadas_root:
-            portada_dir = Path(portadas_root) / dir_name
-            if portada_dir.exists():
-                shutil.rmtree(str(portada_dir), ignore_errors=True)
+            pdir = Path(portadas_root) / dir_name
+            if pdir.exists():
+                for f in list(pdir.iterdir()):
+                    if f.is_file():
+                        target = Path(portadas_root) / f.name
+                        counter = 1
+                        while target.exists():
+                            target = Path(portadas_root) / f"{f.stem}_{counter}{f.suffix}"
+                            counter += 1
+                        shutil.move(str(f), str(target))
+                try:
+                    pdir.rmdir()
+                except OSError:
+                    pass
 
-        self.list_view.set_items(self.items, self.dir_visible, self.directorios)
-        self.detail_view.load_items([])
-        self._mark_dirty()
-        self._update_status()
-        self.status_msg.config(text=f"Directorio eliminado: '{dir_name}'")
+    def _delete_item_files(self, item, old_destino, new_destino,
+                           accion_pdf, accion_portada,
+                           library_root, portadas_root, web_root):
+        if not old_destino:
+            return
+        # PDF
+        if item.nombre_legible and library_root:
+            src = Path(library_root) / old_destino / item.nombre_legible
+            if src.exists():
+                if accion_pdf == "borrar":
+                    src.unlink()
+                elif accion_pdf == "mover" and new_destino is not None:
+                    dst = Path(library_root) / new_destino / item.nombre_legible
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    if dst.exists():
+                        dst.unlink()
+                    shutil.move(str(src), str(dst))
+        # Portada
+        if item.nombre_legible and portadas_root:
+            portada_path = resolve_portada_file(
+                portadas_root, old_destino, Path(item.nombre_legible).stem)
+            if portada_path and portada_path.exists():
+                if accion_portada == "borrar":
+                    portada_path.unlink()
+                    item.portada = ""
+                elif accion_portada == "mover" and new_destino is not None:
+                    new_dir = Path(portadas_root) / new_destino
+                    new_dir.mkdir(parents=True, exist_ok=True)
+                    new_file = new_dir / portada_path.name
+                    if new_file.exists():
+                        new_file.unlink()
+                    shutil.move(str(portada_path), str(new_file))
+                    item.portada = (
+                        os.path.relpath(str(new_file), web_root)
+                        if web_root else new_file.name
+                    )
 
     def _nuevo_directorio(self):
         name = simpledialog.askstring(
@@ -836,28 +1101,89 @@ class App:
         self.status_msg.config(text=f"Directorio creado: '{name}'")
 
     def _delete_dir_menu(self):
-        if not self.directorios:
-            messagebox.showinfo("Eliminar directorio", "No hay directorios en el catálogo.")
+        dirs = self.list_view.get_selected_dirs()
+        if not dirs:
+            if not self.directorios:
+                messagebox.showinfo("Eliminar directorio", "No hay directorios en el catálogo.")
+                return
+            chosen = self._pick_directory_dialog()
+            if chosen is None:
+                return
+            dirs = [chosen]
+
+        dir_defaults = self.config.get("delete_defaults", {}).get("dir", {})
+        dialog = DeleteDirDialog(self.root, dirs, dir_defaults)
+        opts = dialog.result
+        if opts is None:
             return
+
+        self._apply_dir_delete(dirs, opts)
+
+        label = ", ".join(dirs[:3])
+        if len(dirs) > 3:
+            label += f" (+{len(dirs) - 3} más)"
+        self.status_msg.config(text=f"Directorio(s) eliminado(s): {label}")
+
+    def _pick_directory_dialog(self) -> Optional[str]:
         dirs = sorted(self.directorios)
-        choice = simpledialog.askinteger(
-            "Eliminar directorio",
-            "Índice del directorio a eliminar:\n\n"
-            + "\n".join(f"{i}. {d}" for i, d in enumerate(dirs)),
-            minvalue=0,
-            maxvalue=len(dirs) - 1,
-            parent=self.root,
+        win = tk.Toplevel(self.root)
+        win.title("Seleccionar directorio")
+        win.transient(self.root)
+        win.grab_set()
+        win.resizable(False, False)
+
+        frame = ttk.Frame(win, padding=12)
+        frame.pack(fill="both", expand=True)
+
+        ttk.Label(
+            frame,
+            text="Selecciona el directorio a eliminar:",
+        ).pack(anchor="w", pady=(0, 8))
+
+        list_frame = ttk.Frame(frame)
+        list_frame.pack(fill="both", expand=True)
+
+        scrollbar = ttk.Scrollbar(list_frame, orient="vertical")
+        lb = tk.Listbox(
+            list_frame,
+            yscrollcommand=scrollbar.set,
+            selectmode="single",
+            font=("TkFixedFont", 10),
+            exportselection=False,
+            height=min(len(dirs), 15),
+            width=50,
         )
-        if choice is None:
-            return
-        dir_name = dirs[choice]
-        if messagebox.askyesno(
-            "Confirmar",
-            f"¿Eliminar directorio '{dir_name}'?\n"
-            "Los items se moverán a raíz y el directorio físico se borrará.",
-            parent=self.root,
-        ):
-            self._on_dir_delete(dir_name)
+        scrollbar.configure(command=lb.yview)
+        scrollbar.pack(side="right", fill="y")
+        lb.pack(side="left", fill="both", expand=True)
+
+        for d in dirs:
+            lb.insert("end", d)
+        if dirs:
+            lb.selection_set(0)
+        lb.focus_set()
+
+        btn_frame = ttk.Frame(frame)
+        btn_frame.pack(fill="x", pady=(8, 0))
+
+        result = {"dir_name": None}
+
+        def on_accept():
+            sel = lb.curselection()
+            if not sel:
+                return
+            result["dir_name"] = dirs[sel[0]]
+            win.destroy()
+
+        ttk.Button(btn_frame, text="Cancelar", command=win.destroy).pack(
+            side="right", padx=(4, 0)
+        )
+        ttk.Button(btn_frame, text="Seleccionar", command=on_accept).pack(
+            side="right"
+        )
+
+        win.wait_window()
+        return result["dir_name"]
 
     def _collect_directorios(self):
         for item in self.items:
@@ -966,13 +1292,13 @@ class App:
 
         link = ttk.Label(
             frame,
-            text="github.com/carlymx",
+            text="github.com/carlymx/Bibliotheca_Arcanorum",
             font=("", 10, "underline"),
             foreground="blue",
             cursor="hand2",
         )
         link.pack()
-        link.bind("<Button-1>", lambda e: _wb.open("https://github.com/carlymx"))
+        link.bind("<Button-1>", lambda e: _wb.open("https://github.com/carlymx/Bibliotheca_Arcanorum"))
 
         ttk.Separator(frame, orient="horizontal").pack(fill="x", pady=12)
 
