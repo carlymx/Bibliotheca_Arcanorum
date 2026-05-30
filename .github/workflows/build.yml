@@ -13,16 +13,22 @@ jobs:
         include:
           - os: ubuntu-latest
             artifact-name: Gestor_biblioteca-x86_64.AppImage
+            final-suffix: Linux-x86_64.AppImage
             build-script: scripts/build-linux.sh
           - os: windows-latest
             artifact-name: Gestor_biblioteca.exe
+            final-suffix: Windows-x86_64.exe
             build-script: scripts/build-windows.ps1
           - os: macos-14
             artifact-name: Gestor_biblioteca-x86_64.dmg
+            final-suffix: MacOS_Intel_Legacy.dmg
+            final-zip-suffix: MacOS_Intel_Legacy.zip
             arch: x86_64
             build-script: scripts/build-macos.sh
           - os: macos-14
             artifact-name: Gestor_biblioteca-arm64.dmg
+            final-suffix: MacOS_arm64.dmg
+            final-zip-suffix: MacOS_arm64.zip
             arch: arm64
             build-script: scripts/build-macos.sh
 
@@ -60,18 +66,41 @@ jobs:
         shell: pwsh
         run: ./scripts/build-windows.ps1
 
+      - name: Rename artifact (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          tag="${{ github.ref_name }}"
+          mv "dist/${{ matrix.artifact-name }}" \
+             "dist/Gestor_biblioteca-${tag}-${{ matrix.final-suffix }}"
+
+      - name: Rename artifact (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          tag="${{ github.ref_name }}"
+          mv "dist/${{ matrix.artifact-name }}" \
+             "dist/Gestor_biblioteca-${tag}-${{ matrix.final-suffix }}"
+          mv "dist/Gestor_biblioteca-${{ matrix.arch }}.zip" \
+             "dist/Gestor_biblioteca-${tag}-${{ matrix.final-zip-suffix }}"
+
+      - name: Rename artifact (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          Move-Item "dist/Gestor_biblioteca.exe" "dist/Gestor_biblioteca-${tag}-Windows-x86_64.exe"
+
       - name: Upload Artifacts (Linux / Windows)
         if: runner.os != 'macOS'
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ matrix.artifact-name }}
-          path: dist/${{ matrix.artifact-name }}
+          name: Gestor_biblioteca-${{ github.ref_name }}-${{ matrix.final-suffix }}
+          path: dist/Gestor_biblioteca-${{ github.ref_name }}-${{ matrix.final-suffix }}
 
       - name: Upload Artifacts (macOS)
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ matrix.artifact-name }}
+          name: Gestor_biblioteca-${{ github.ref_name }}-${{ matrix.final-suffix }}
           path: |
-            dist/${{ matrix.artifact-name }}
-            dist/Gestor_biblioteca-${{ matrix.arch }}.zip
+            dist/Gestor_biblioteca-${{ github.ref_name }}-${{ matrix.final-suffix }}
+            dist/Gestor_biblioteca-${{ github.ref_name }}-${{ matrix.final-zip-suffix }}
