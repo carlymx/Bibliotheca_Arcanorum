@@ -81,12 +81,33 @@ class HelpView(ttk.Frame):
              "Busca portadas faltantes o mal asignadas. Compara las rutas de portada "
              "de cada ficha contra los archivos existentes en el directorio de portadas.\n\n"
              "Sugiere correcciones automáticas (coincidencias exactas y aproximadas)."),
-            ("Portadas → Extraer portadas",
-             "Abre una ventana para extraer portadas en lote desde archivos PDF, "
-             "imágenes (JPG, PNG, TIFF, BMP, WEBP, GIF) y archivos de audio con "
-             "carátula incrustada (MP3, M4A/AAC, OGG, FLAC).\n\n"
-             "Configura directorio origen y destino, formato de salida, resolución, "
-             "y sobrescritura. Usa procesamiento paralelo y muestra progreso en tiempo real."),
+             ("Portadas → Extraer portadas",
+              "Abre una ventana para extraer portadas en lote desde archivos PDF, "
+              "imágenes (JPG, PNG, TIFF, BMP, WEBP, GIF), archivos de audio con "
+              "carátula incrustada (MP3, M4A/AAC, OGG, FLAC), y libros digitales "
+              "(EPUB, MOBI, AZW3, CBZ, CBR, DOCX).\n\n"
+              "Los checkboxes de formatos están agrupados en tres categorías: "
+              "Documentos (PDF, EPUB, CBZ, CBR, MOBI/AZW3, DOCX), "
+              "Imagenes/Mapas (JPG, PNG, TIFF, BMP, WEBP, GIF), "
+              "y Audio/Musica (MP3, M4A/AAC, OGG, FLAC).\n\n"
+              "Configura directorio origen y destino, formato de salida, resolución, "
+              "y sobrescritura. Usa procesamiento paralelo y muestra progreso en tiempo real."),
+             ("   Página",
+              "Número de página (1-based) que se usará como portada. "
+              "El comportamiento varía según el formato:\n\n"
+              "• PDF/CBZ/CBR/DOCX: el número indica la página o imagen "
+              "a extraer. Si supera el total disponible, se usa la última "
+              "automáticamente. Truco: pon 9999 para obtener la contraportada "
+              "de todos los archivos.\n\n"
+              "• EPUB/MOBI/AZW3: ignoran este parámetro. Siempre extraen "
+              "la portada declarada en los metadatos del libro.\n\n"
+              "Por defecto es 1 (primera página o portada)."),
+            ("   Trabajos en paralelo",
+             "Número de procesos simultáneos que se lanzan para extraer portadas. "
+             "Por defecto se usan 4, pero puedes ajustarlo del 1 al máximo de hilos "
+             "de tu procesador (se muestra entre paréntesis al lado del control).\n\n"
+             "Con valores altos se acelera la extracción masiva en máquinas multinúcleo. "
+             "Reduce el número si notas el sistema lento o si trabajas con archivos muy grandes."),
             ("Directorios → Añadir directorio",
              "Crea un nuevo directorio tanto en el sistema de archivos como en el "
              "catálogo. Pide el nombre y crea la carpeta en library_root y portadas_root."),

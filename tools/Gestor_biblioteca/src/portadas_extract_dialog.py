@@ -7,11 +7,15 @@ import threading
 import io
 import fnmatch
 import base64
+import zipfile
+import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from tkinter import ttk, filedialog, messagebox
 import tkinter as tk
 from typing import Dict, List, Optional, Tuple
+
+_MAX_HILOS = os.cpu_count() or 4
 
 from .utils.formatters import format_bytes
 
@@ -34,6 +38,30 @@ def _get_pdftoppm_path() -> str:
             return str(path)
     return shutil.which('pdftoppm') or 'pdftoppm'
 
+
+def _get_pdfinfo_path() -> str:
+    if _BUNDLED_DIR:
+        path = Path(_BUNDLED_DIR) / ('pdfinfo.exe' if sys.platform == 'win32' else 'pdfinfo')
+        if path.exists():
+            return str(path)
+    return shutil.which('pdfinfo') or 'pdfinfo'
+
+
+def _get_pdf_page_count(path: str) -> int:
+    try:
+        r = subprocess.run(
+            [_get_pdfinfo_path(), path],
+            capture_output=True, timeout=30, text=True)
+        if r.returncode != 0:
+            return 0
+        for line in r.stdout.splitlines():
+            if line.startswith("Pages:"):
+                return int(line.split(":")[1].strip())
+    except Exception:
+        pass
+    return 0
+
+
 try:
     import mutagen
     from mutagen.mp3 import MP3
@@ -45,21 +73,47 @@ except ImportError:
     _HAS_MUTAGEN = False
 
 
+try:
+    import rarfile
+    _HAS_RARFILE = True
+except ImportError:
+    _HAS_RARFILE = False
+
+try:
+    import mobi
+    _HAS_MOBI = True
+except ImportError:
+    _HAS_MOBI = False
+
+
 EXTENSIONS = {
-    "PDF":      (".pdf",),
-    "JPG/JPEG": (".jpg", ".jpeg"),
-    "PNG":      (".png",),
-    "TIFF":     (".tif", ".tiff"),
-    "BMP":      (".bmp",),
-    "WEBP":     (".webp",),
-    "GIF":      (".gif",),
-    "MP3":      (".mp3",),
-    "M4A/AAC":  (".m4a", ".aac", ".mp4", ".m4b"),
-    "OGG":      (".ogg",),
-    "FLAC":     (".flac",),
+    "PDF":       (".pdf",),
+    "EPUB":      (".epub",),
+    "CBZ":       (".cbz",),
+    "CBR":       (".cbr",),
+    "MOBI/AZW3": (".mobi", ".azw3", ".azw"),
+    "DOCX":      (".docx",),
+    "JPG/JPEG":  (".jpg", ".jpeg"),
+    "PNG":       (".png",),
+    "TIFF":      (".tif", ".tiff"),
+    "BMP":       (".bmp",),
+    "WEBP":      (".webp",),
+    "GIF":       (".gif",),
+    "MP3":       (".mp3",),
+    "M4A/AAC":   (".m4a", ".aac", ".mp4", ".m4b"),
+    "OGG":       (".ogg",),
+    "FLAC":      (".flac",),
 }
 
 FORMAT_KEYS = list(EXTENSIONS.keys())
+
+CATEGORIAS = [
+    ("Documentos",     ["PDF", "EPUB", "CBZ", "CBR", "MOBI/AZW3", "DOCX"]),
+    ("Imagenes/Mapas", ["JPG/JPEG", "PNG", "TIFF", "BMP", "WEBP", "GIF"]),
+    ("Audio/Musica",   ["MP3", "M4A/AAC", "OGG", "FLAC"]),
+]
+
+_AUDIO_EXTS = {".mp3", ".m4a", ".aac", ".mp4", ".m4b", ".ogg", ".flac"}
 
 FORMATOS_SALIDA = ["jpg", "png", "tiff", "bmp", "webp", "gif"]
 
@@ -117,6 +171,9 @@ def _extract_cover_from_audio(path: str) -> Optional[bytes]:
 
 def _extract_pdf_cover(src: str, dst: str, page: int,
                        resize: Optional[str]) -> bool:
+    total = _get_pdf_page_count(src)
+    if total > 0 and page > total:
+        page = total
     tmpdir = tempfile.mkdtemp()
     try:
         prefix = os.path.join(tmpdir, "page")
@@ -164,6 +221,149 @@ def _extract_audio_cover(src: str, dst: str,
         return _save_image_file(img, dst, resize)
     except Exception:
         return False
+
+
+def _extract_epub_cover(path: str) -> Optional[bytes]:
+    try:
+        with zipfile.ZipFile(path) as zf:
+            try:
+                container = zf.read("META-INF/container.xml")
+            except KeyError:
+                return None
+            root = ET.fromstring(container)
+            ns = {
+                "c": "urn:oasis:names:tc:opendocument:xmlns:container",
+                "opf": "http://www.idpf.org/2007/opf",
+            }
+            rootfile_el = root.find(".//c:rootfiles/c:rootfile", ns)
+            if rootfile_el is None:
+                return None
+            opf_path = rootfile_el.get("full-path", "")
+
+            opf_raw = zf.read(opf_path)
+            opf_root = ET.fromstring(opf_raw)
+            opf_dir = Path(opf_path).parent
+
+            cover_id = None
+            for meta in opf_root.findall(".//{http://www.idpf.org/2007/opf}meta"):
+                if meta.get("name", "").lower() == "cover":
+                    cover_id = meta.get("content")
+                    break
+
+            if not cover_id:
+                for item in opf_root.findall(".//{http://www.idpf.org/2007/opf}item"):
+                    item_id = item.get("id", "").lower()
+                    if item_id in ("cover", "cover-image"):
+                        cover_id = item.get("id")
+                        break
+
+            if not cover_id:
+                for name in zf.namelist():
+                    basename = Path(name).name.lower()
+                    if basename.startswith("cover.") and not name.endswith("/"):
+                        return zf.read(name)
+                return None
+
+            for item in opf_root.findall(".//{http://www.idpf.org/2007/opf}item"):
+                if item.get("id") == cover_id:
+                    href = item.get("href", "")
+                    media_type = item.get("media-type", "")
+                    if media_type.startswith("image/"):
+                        full_path = str(opf_dir / href)
+                        return zf.read(full_path)
+            return None
+    except Exception:
+        return None
+
+
+def _extract_cbz_page(path: str, page: int) -> Optional[bytes]:
+    IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tif", ".tiff"}
+    try:
+        with zipfile.ZipFile(path) as zf:
+            images = sorted(
+                n for n in zf.namelist()
+                if Path(n).suffix.lower() in IMAGE_EXTS
+            )
+            if not images:
+                return None
+            idx = min(max(0, page - 1), len(images) - 1)
+            return zf.read(images[idx])
+    except Exception:
+        return None
+
+
+def _extract_cbr_page(path: str, page: int) -> Optional[bytes]:
+    if not _HAS_RARFILE:
+        return None
+    IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tif", ".tiff"}
+    try:
+        with rarfile.RarFile(path) as rf:
+            images = sorted(
+                n for n in rf.namelist()
+                if Path(n).suffix.lower() in IMAGE_EXTS
+            )
+            if not images:
+                return None
+            idx = min(max(0, page - 1), len(images) - 1)
+            return rf.read(images[idx])
+    except Exception:
+        return None
+
+
+def _extract_mobi_cover(path: str) -> Optional[bytes]:
+    if not _HAS_MOBI:
+        return None
+    try:
+        book = mobi.Mobi(path)
+        book.parse()
+        return book.cover()
+    except Exception:
+        return None
+
+
+def _extract_docx_page(path: str, page: int) -> Optional[bytes]:
+    IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tif", ".tiff"}
+    try:
+        with zipfile.ZipFile(path) as zf:
+            rels = {}
+            try:
+                rels_xml = zf.read("word/_rels/document.xml.rels")
+                rels_root = ET.fromstring(rels_xml)
+                for rel in rels_root:
+                    rid = rel.get("Id")
+                    target = rel.get("Target", "")
+                    rtype = rel.get("Type", "")
+                    if rid and "image" in rtype:
+                        full = str(Path("word") / target)
+                        rels[rid] = full
+            except KeyError:
+                pass
+
+            doc_xml = zf.read("word/document.xml")
+            doc_root = ET.fromstring(doc_xml)
+
+            images_in_order = []
+            ns = {
+                "w": _WORD_DOC_NS,
+                "r": _WORD_R_NS,
+                "a": _WORD_A_NS,
+            }
+            for blip in doc_root.findall(".//a:blip", ns):
+                embed = blip.get(
+                    "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed")
+                if embed and embed in rels:
+                    img_path = rels[embed]
+                    ext = Path(img_path).suffix.lower()
+                    if ext in IMAGE_EXTS:
+                        images_in_order.append(img_path)
+
+            if not images_in_order:
+                return None
+
+            idx = min(max(0, page - 1), len(images_in_order) - 1)
+            return zf.read(images_in_order[idx])
+    except Exception:
+        return None
 
 
 def _convert_image_file(src: str, dst: str,
@@ -313,14 +513,16 @@ class PortadasExtractDialog(tk.Toplevel):
         fmt_frame = ttk.Frame(scrollable)
         fmt_frame.grid(row=5, column=1, columnspan=2, sticky="w", **pad)
         self._fmt_vars: Dict[str, tk.BooleanVar] = {}
-        for i, key in enumerate(FORMAT_KEYS):
-            v = tk.BooleanVar(value=True)
-            self._fmt_vars[key] = v
-            cb = ttk.Checkbutton(fmt_frame, text=key, variable=v)
-            cb.grid(row=i // 4, column=i % 4, sticky="w", padx=(0, 12))
-        btn_row = (len(FORMAT_KEYS) + 3) // 4
+        for cat_idx, (cat_name, keys) in enumerate(CATEGORIAS):
+            lf = ttk.LabelFrame(fmt_frame, text=cat_name, padding=6)
+            lf.grid(row=0, column=cat_idx, sticky="nw", padx=(0, 8))
+            for i, key in enumerate(keys):
+                v = tk.BooleanVar(value=True)
+                self._fmt_vars[key] = v
+                cb = ttk.Checkbutton(lf, text=key, variable=v)
+                cb.grid(row=i // 3, column=i % 3, sticky="w", padx=(0, 8))
         bf = ttk.Frame(fmt_frame)
-        bf.grid(row=btn_row, column=0, columnspan=4, sticky="w", pady=(4, 0))
+        bf.grid(row=1, column=0, columnspan=3, sticky="w", pady=(4, 0))
         ttk.Button(bf, text="Seleccionar todo", command=self._fmt_all).pack(side="left", padx=(0, 6))
         ttk.Button(bf, text="Seleccionar ninguno", command=self._fmt_none).pack(side="left")
 
@@ -333,9 +535,14 @@ class PortadasExtractDialog(tk.Toplevel):
 
         ttk.Label(scrollable, text="Trabajos en paralelo:", font=("", 9, "bold")).grid(
             row=7, column=0, sticky="w", **pad)
-        self._hilos_var = tk.IntVar(value=4)
-        ttk.Spinbox(scrollable, from_=1, to=16, textvariable=self._hilos_var, width=6).grid(
-            row=7, column=1, sticky="w", **pad)
+        hilos_frame = ttk.Frame(scrollable)
+        hilos_frame.grid(row=7, column=1, sticky="w", **pad)
+        self._hilos_var = tk.IntVar(value=min(4, _MAX_HILOS))
+        self._hilos_var.trace_add("write", self._clamp_hilos)
+        ttk.Spinbox(hilos_frame, from_=1, to=_MAX_HILOS,
+                    textvariable=self._hilos_var, width=6).pack(side="left")
+        ttk.Label(hilos_frame, text=f"(1-{_MAX_HILOS} | {_MAX_HILOS} disp.)",
+                  font=("", 8)).pack(side="left", padx=(4, 0))
 
         ttk.Label(scrollable, text="Excluir patrones:", font=("", 9, "bold")).grid(
             row=8, column=0, sticky="nw", **pad)
@@ -408,6 +615,15 @@ class PortadasExtractDialog(tk.Toplevel):
         ttk.Button(btn_row, text="Cerrar", command=self._on_close).pack(side="right")
 
     # ── helpers ───────────────────────────────────────────
+
+    def _clamp_hilos(self, *_):
+        try:
+            v = self._hilos_var.get()
+        except (ValueError, tk.TclError):
+            v = 1
+        clamped = max(1, min(v, _MAX_HILOS))
+        if v != clamped:
+            self._hilos_var.set(clamped)
 
     def _browse(self, var):
         path = filedialog.askdirectory(parent=self)
@@ -662,11 +878,22 @@ class PortadasExtractDialog(tk.Toplevel):
         try:
             ext = os.path.splitext(filepath)[1].lower()
             resize = self._resize_str(args)
+            pagina = args["pagina"]
 
             ok = False
             if ext == ".pdf":
-                ok = self._process_pdf(filepath, out, args["pagina"], resize)
-            elif ext in (".mp3", ".m4a", ".aac", ".mp4", ".m4b", ".ogg", ".flac"):
+                ok = self._process_pdf(filepath, out, pagina, resize)
+            elif ext == ".epub":
+                ok = self._process_epub(filepath, out, resize)
+            elif ext == ".cbz":
+                ok = self._process_cbz(filepath, out, pagina, resize)
+            elif ext == ".cbr":
+                ok = self._process_cbr(filepath, out, pagina, resize)
+            elif ext in (".mobi", ".azw3", ".azw"):
+                ok = self._process_mobi(filepath, out, resize)
+            elif ext == ".docx":
+                ok = self._process_docx(filepath, out, pagina, resize)
+            elif ext in _AUDIO_EXTS:
                 ok = self._process_audio(filepath, out, resize)
             else:
                 ok = self._process_image(filepath, out, ext, formato, resize)
@@ -695,6 +922,61 @@ class PortadasExtractDialog(tk.Toplevel):
     def _process_audio(self, src: str, dst: str,
                        resize: Optional[str]) -> bool:
         return _extract_audio_cover(src, dst, resize)
+
+    def _process_epub(self, src: str, dst: str,
+                      resize: Optional[str]) -> bool:
+        data = _extract_epub_cover(src)
+        if data is None or Image is None:
+            return False
+        try:
+            img = Image.open(io.BytesIO(data))
+            return _save_image_file(img, dst, resize)
+        except Exception:
+            return False
+
+    def _process_cbz(self, src: str, dst: str, page: int,
+                     resize: Optional[str]) -> bool:
+        data = _extract_cbz_page(src, page)
+        if data is None or Image is None:
+            return False
+        try:
+            img = Image.open(io.BytesIO(data))
+            return _save_image_file(img, dst, resize)
+        except Exception:
+            return False
+
+    def _process_cbr(self, src: str, dst: str, page: int,
+                     resize: Optional[str]) -> bool:
+        data = _extract_cbr_page(src, page)
+        if data is None or Image is None:
+            return False
+        try:
+            img = Image.open(io.BytesIO(data))
+            return _save_image_file(img, dst, resize)
+        except Exception:
+            return False
+
+    def _process_mobi(self, src: str, dst: str,
+                      resize: Optional[str]) -> bool:
+        data = _extract_mobi_cover(src)
+        if data is None or Image is None:
+            return False
+        try:
+            img = Image.open(io.BytesIO(data))
+            return _save_image_file(img, dst, resize)
+        except Exception:
+            return False
+
+    def _process_docx(self, src: str, dst: str, page: int,
+                      resize: Optional[str]) -> bool:
+        data = _extract_docx_page(src, page)
+        if data is None or Image is None:
+            return False
+        try:
+            img = Image.open(io.BytesIO(data))
+            return _save_image_file(img, dst, resize)
+        except Exception:
+            return False
 
     def _convert_image(self, src: str, dst: str,
                        resize: Optional[str]) -> bool:
@@ -930,7 +1212,22 @@ class SinglePortadaExtractDialog(tk.Toplevel):
 
         if ext == ".pdf":
             ok = _extract_pdf_cover(src, dst, page, resize)
-        elif ext in (".mp3", ".m4a", ".aac", ".mp4", ".m4b", ".ogg", ".flac"):
+        elif ext == ".epub":
+            data = _extract_epub_cover(src)
+            ok = self._save_bytes_as_image(data, dst, resize)
+        elif ext == ".cbz":
+            data = _extract_cbz_page(src, page)
+            ok = self._save_bytes_as_image(data, dst, resize)
+        elif ext == ".cbr":
+            data = _extract_cbr_page(src, page)
+            ok = self._save_bytes_as_image(data, dst, resize)
+        elif ext in (".mobi", ".azw3", ".azw"):
+            data = _extract_mobi_cover(src)
+            ok = self._save_bytes_as_image(data, dst, resize)
+        elif ext == ".docx":
+            data = _extract_docx_page(src, page)
+            ok = self._save_bytes_as_image(data, dst, resize)
+        elif ext in _AUDIO_EXTS:
             ok = _extract_audio_cover(src, dst, resize)
         else:
             ok = _extract_image_cover(src, dst, ext, fmt, resize)
@@ -954,6 +1251,15 @@ class SinglePortadaExtractDialog(tk.Toplevel):
         self._running = False
         self._extract_btn.configure(state="normal")
         self._cancel_btn.configure(state="disabled")
+
+    def _save_bytes_as_image(self, data, dst, resize):
+        if data is None or Image is None:
+            return False
+        try:
+            img = Image.open(io.BytesIO(data))
+            return _save_image_file(img, dst, resize)
+        except Exception:
+            return False
 
     def _cancel(self):
         self._cancel_event.set()

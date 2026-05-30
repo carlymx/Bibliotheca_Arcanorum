@@ -33,6 +33,8 @@ a = Analysis(
         'mutagen',
         'mutagen.mp3', 'mutagen.mp4', 'mutagen.oggvorbis', 'mutagen.flac',
         'mutagen.id3',
+        'rarfile',
+        'mobi',
     ] + sv_ttk_submodules,
     hookspath=[],
     hooksconfig={},

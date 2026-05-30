@@ -28,7 +28,7 @@ from .views.help_view import HelpView
 from .delete_dialog import DeleteItemDialog, DeleteDirDialog, DeleteDirResult
 
 
-VERSION = "0.9.2"
+VERSION = "0.9.3"
 
 
 class App:
