@@ -239,6 +239,27 @@ La web tiene **cero dependencias** — ni npm, ni build step, ni frameworks, ni 
 
 ---
 
+## Capturas de pantalla
+
+<details>
+<summary><strong>App de escritorio (Gestor_biblioteca)</strong></summary>
+
+<a href="src/imgs/img_app_001.png" target="_blank"><img src="src/imgs/img_app_001.png" alt="Ventana principal" width="360"></a>
+<a href="src/imgs/img_app_002.png" target="_blank"><img src="src/imgs/img_app_002.png" alt="Árbol del catálogo y formulario de detalle" width="360"></a>
+<a href="src/imgs/img_app_003.png" target="_blank"><img src="src/imgs/img_app_003.png" alt="Diálogo de extracción de portadas" width="360"></a>
+<a href="src/imgs/img_app_004.png" target="_blank"><img src="src/imgs/img_app_004.png" alt="Importación/exportación y configuración" width="360"></a>
+</details>
+
+<details>
+<summary><strong>Catálogo web (SPA)</strong></summary>
+
+<a href="src/imgs/img_web_001.png" target="_blank"><img src="src/imgs/img_web_001.png" alt="Vista cuadrícula del catálogo web" width="360"></a>
+<a href="src/imgs/img_web_002.png" target="_blank"><img src="src/imgs/img_web_002.png" alt="Panel de detalle del catálogo web" width="360"></a>
+<a href="src/imgs/img_web_003.png" target="_blank"><img src="src/imgs/img_web_003.png" alt="Configuración y búsqueda en el catálogo web" width="360"></a>
+</details>
+
+---
+
 ## Proyectos relacionados
 
 - [Sun-Valley-ttk-theme](https://github.com/rdbende/Sun-Valley-ttk-theme) — Tema moderno para Tkinter usado por Gestor_biblioteca

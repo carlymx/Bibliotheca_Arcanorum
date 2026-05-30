@@ -239,6 +239,27 @@ The web has **zero dependencies** — no npm, no build step, no frameworks, no C
 
 ---
 
+## Screenshots
+
+<details>
+<summary><strong>Desktop app (Gestor_biblioteca)</strong></summary>
+
+<a href="src/imgs/img_app_001.png" target="_blank"><img src="src/imgs/img_app_001.png" alt="Main window" width="360"></a>
+<a href="src/imgs/img_app_002.png" target="_blank"><img src="src/imgs/img_app_002.png" alt="Catalog tree and detail form" width="360"></a>
+<a href="src/imgs/img_app_003.png" target="_blank"><img src="src/imgs/img_app_003.png" alt="Cover extraction dialog" width="360"></a>
+<a href="src/imgs/img_app_004.png" target="_blank"><img src="src/imgs/img_app_004.png" alt="Import/export and settings" width="360"></a>
+</details>
+
+<details>
+<summary><strong>Web catalog (SPA)</strong></summary>
+
+<a href="src/imgs/img_web_001.png" target="_blank"><img src="src/imgs/img_web_001.png" alt="Web catalog grid view" width="360"></a>
+<a href="src/imgs/img_web_002.png" target="_blank"><img src="src/imgs/img_web_002.png" alt="Web catalog detail panel" width="360"></a>
+<a href="src/imgs/img_web_003.png" target="_blank"><img src="src/imgs/img_web_003.png" alt="Web catalog settings and search" width="360"></a>
+</details>
+
+---
+
 ## Related projects
 
 - [Sun-Valley-ttk-theme](https://github.com/rdbende/Sun-Valley-ttk-theme) — Modern Tkinter theme used by Gestor_biblioteca
