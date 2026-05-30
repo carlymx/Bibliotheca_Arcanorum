@@ -27,7 +27,7 @@ def _build_metadata(
     biblioteca_origen: str = "",
     comentario: str = "",
     directorio_base: str = "",
-    app_version: str = "0.9.3",
+    app_version: str = "0.9.4",
 ) -> dict:
     return {
         "format_version": BIBLIOTEX_FORMAT_VERSION,
