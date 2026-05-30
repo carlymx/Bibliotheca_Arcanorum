@@ -1,5 +1,7 @@
 import os
+import json
 import shutil
+import urllib.request
 import tkinter as tk
 from tkinter import simpledialog, ttk, filedialog, messagebox
 from pathlib import Path
@@ -28,7 +30,7 @@ from .views.help_view import HelpView
 from .delete_dialog import DeleteItemDialog, DeleteDirDialog, DeleteDirResult
 
 
-VERSION = "0.9.4"
+VERSION = "0.9.5"
 
 
 class App:
@@ -72,6 +74,7 @@ class App:
 
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self._update_status()
+        self.root.after(1500, lambda: self._check_for_updates(silent=True))
 
     # ── build ──────────────────────────────────────────────
 
@@ -119,6 +122,8 @@ class App:
 
         self._about_menu = tk.Menu(menubar, tearoff=0)
         self._about_menu.add_command(label="Acerca de...", command=self._about)
+        self._about_menu.add_separator()
+        self._about_menu.add_command(label="Buscar actualizaciones...", command=lambda: self._check_for_updates(silent=False))
         menubar.add_cascade(label="?", menu=self._about_menu)
 
         self._update_recent_libraries_menu()
@@ -1259,6 +1264,46 @@ class App:
             for path in recents:
                 label = Path(path).stem
                 self._recent_menu.add_command(label=label, command=lambda p=path: self.open_json(p))
+
+    def _check_for_updates(self, silent: bool = False):
+        def _do_check():
+            try:
+                req = urllib.request.Request(
+                    "https://api.github.com/repos/CaRLymx/Bibliotheca_Arcanorum/releases/latest",
+                    headers={"Accept": "application/vnd.github.v3+json",
+                             "User-Agent": "GestorBiblioteca/1.0"},
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read().decode())
+                latest_tag = data.get("tag_name", "").lstrip("vV")
+                if not latest_tag:
+                    return
+                current = tuple(int(x) for x in VERSION.split("."))
+                latest = tuple(int(x) for x in latest_tag.split("."))
+                if latest > current:
+                    self.root.after(0, lambda: self._show_update_available(
+                        data.get("tag_name", ""), data.get("html_url", "")))
+                elif not silent:
+                    self.root.after(0, lambda: messagebox.showinfo(
+                        "Actualizaciones",
+                        f"Tienes la última versión instalada: v{VERSION}"))
+            except Exception as e:
+                if not silent:
+                    self.root.after(0, lambda: messagebox.showerror(
+                        "Error de conexión",
+                        f"No se pudo comprobar actualizaciones:\n{e}"))
+        threading.Thread(target=_do_check, daemon=True).start()
+
+    def _show_update_available(self, tag: str, url: str):
+        import webbrowser as _wb
+        resp = messagebox.askyesno(
+            "Actualización disponible",
+            f"Nueva versión {tag} disponible.\n"
+            f"Tienes instalado: v{VERSION}\n\n"
+            "¿Quieres abrir la página de descarga?",
+        )
+        if resp:
+            _wb.open(url)
 
     def _about(self):
         import webbrowser as _wb
