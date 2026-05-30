@@ -48,6 +48,9 @@ venv.bak/
 .spyderproject
 .spyproject
 
+# --- opencode ---
+.opencode/
+
 # --- Testing & coverage ---
 .pytest_cache/
 .tox/
