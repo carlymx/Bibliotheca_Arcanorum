@@ -31,7 +31,7 @@ from .delete_dialog import DeleteItemDialog, DeleteDirDialog, DeleteDirResult
 from .update_dialog import UpdateCheckerDialog, urlopen_with_fallback, parse_version
 
 
-VERSION = "0.9.9"
+VERSION = "0.9.10"
 
 
 class App:

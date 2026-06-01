@@ -1,4 +1,3 @@
-## v0.9.9
+## v0.9.10
 
-- Fix: links en Acerca de ahora usan open_url() con fallback xdg-open
-- Actualización: ayuda con sección Documento, Ubicación Documento, upload comportamiento
+- Fix: open_url ahora usa subprocess.run con check=True y shutil.which para que los links funcionen en compilados PyInstaller
