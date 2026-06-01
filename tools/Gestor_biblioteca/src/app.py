@@ -31,7 +31,7 @@ from .delete_dialog import DeleteItemDialog, DeleteDirDialog, DeleteDirResult
 from .update_dialog import UpdateCheckerDialog, urlopen_with_fallback, parse_version
 
 
-VERSION = "0.9.6"
+VERSION = "0.9.7"
 
 
 class App:
@@ -172,6 +172,7 @@ class App:
             on_item_select=self._on_item_selected,
             on_dir_select=self._on_dir_selected,
             on_item_dropped=self._on_item_dropped,
+            on_dir_dropped=self._on_dir_dropped,
             on_visibility_changed=self._mark_dirty,
             on_export_request=self._export_items,
         )
@@ -1258,6 +1259,78 @@ class App:
         self._update_status()
         count = len(items)
         self.status_msg.config(text=f"Movidas {count} ficha(s) a {new_destino}")
+
+    def _on_dir_dropped(self, dirs: List[str], new_parent: str):
+        mover = self.config.get("mover_items_fisicamente", True)
+        library_root = self.config.get("library_root", "")
+        portadas_root = self.config.get("portadas_root", "")
+        modified = False
+
+        for old_dir in dirs:
+            dir_name = old_dir.rsplit("/", 1)[-1]
+            new_dir = f"{new_parent}/{dir_name}" if new_parent else dir_name
+
+            if new_dir == old_dir:
+                continue
+
+            if mover:
+                if library_root and Path(library_root, new_dir).exists():
+                    messagebox.showwarning(
+                        "Directorio existente",
+                        f"'{new_dir}' ya existe en el disco. Se omite '{old_dir}'.",
+                    )
+                    continue
+                if portadas_root and Path(portadas_root, new_dir).exists():
+                    messagebox.showwarning(
+                        "Directorio existente",
+                        f"La carpeta de portadas '{new_dir}' ya existe. Se omite.",
+                    )
+                    continue
+
+            if mover:
+                if library_root:
+                    old_path = Path(library_root) / old_dir
+                    if old_path.exists():
+                        new_path = Path(library_root) / new_dir
+                        new_path.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.move(str(old_path), str(new_path))
+                if portadas_root:
+                    old_port = Path(portadas_root) / old_dir
+                    if old_port.exists():
+                        new_port = Path(portadas_root) / new_dir
+                        new_port.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.move(str(old_port), str(new_port))
+
+            old_prefix = old_dir + "/"
+            for item in self.items:
+                if item.destino and (
+                    item.destino.rstrip("/") == old_dir
+                    or item.destino.startswith(old_prefix)
+                ):
+                    suffix = item.destino[len(old_dir):]
+                    item.destino = f"{new_dir}{suffix}"
+
+            for d in list(self.dir_visible.keys()):
+                if d == old_dir or d.startswith(old_prefix):
+                    suffix = d[len(old_dir):]
+                    self.dir_visible[f"{new_dir}{suffix}"] = self.dir_visible.pop(d)
+
+            stale = [p for p in self.directorios
+                     if p == old_dir or p.startswith(old_prefix)]
+            for p in stale:
+                self.directorios.discard(p)
+
+            modified = True
+
+        if not modified:
+            return
+
+        self._collect_directorios()
+        self.list_view.refresh()
+        self._mark_dirty()
+        self._update_status()
+        count = len(dirs)
+        self.status_msg.config(text=f"Movido(s) {count} directorio(s) con su contenido.")
 
     def _on_config_saved(self, config: dict):
         self.config.update(config)

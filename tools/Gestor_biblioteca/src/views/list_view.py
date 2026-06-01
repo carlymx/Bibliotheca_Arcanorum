@@ -13,6 +13,7 @@ class ListView(ttk.Frame):
         on_item_select: Callable[[List[Item]], None] = None,
         on_dir_select: Callable[[Optional[str]], None] = None,
         on_item_dropped: Callable[[List[Item], str], None] = None,
+        on_dir_dropped: Callable[[List[str], str], None] = None,
         on_visibility_changed: Callable[[], None] = None,
         on_export_request: Callable[[List[Item]], None] = None,
     ):
@@ -20,6 +21,7 @@ class ListView(ttk.Frame):
         self.on_item_select = on_item_select
         self.on_dir_select = on_dir_select
         self.on_item_dropped = on_item_dropped
+        self.on_dir_dropped = on_dir_dropped
         self.on_visibility_changed = on_visibility_changed
         self.on_export_request = on_export_request
 
@@ -30,7 +32,9 @@ class ListView(ttk.Frame):
         self._ignore_select = False
         self._drag_pending = False
         self._drag_active = False
+        self._drag_type: Optional[str] = None
         self._drag_item_iids: List[str] = []
+        self._drag_dir_paths: List[str] = []
         self._last_hover_node: Optional[str] = None
         self._click_node = None
         self.search_var = tk.StringVar()
@@ -110,7 +114,10 @@ class ListView(ttk.Frame):
     def _is_dir_node(self, node_id: str) -> bool:
         if node_id == "__root__":
             return True
-        tags = self.tree.item(node_id, "tags")
+        try:
+            tags = self.tree.item(node_id, "tags")
+        except tk.TclError:
+            return False
         return "_dir" in tags
 
     def _is_item_node(self, node_id: str) -> bool:
@@ -144,6 +151,14 @@ class ListView(ttk.Frame):
         self._ignore_select = False
 
     def _rebuild_tree(self, search_query: str = ""):
+        open_state: Dict[str, bool] = {}
+        for child in self.tree.get_children():
+            try:
+                if self._is_dir_node(child):
+                    open_state[child] = self.tree.item(child, "open")
+            except tk.TclError:
+                pass
+
         self.tree.delete(*self.tree.get_children())
         self._item_idx.clear()
 
@@ -233,6 +248,10 @@ class ListView(ttk.Frame):
                 values=(portada_icon, oculto_icon),
                 tags=("_item",),
             )
+
+        for path, was_open in open_state.items():
+            if self.tree.exists(path):
+                self.tree.item(path, open=was_open)
 
         if search_query:
             for dir_path in matching_dirs:
@@ -380,10 +399,21 @@ class ListView(ttk.Frame):
             self._ignore_select = False
             return "break"
 
+        if node and self._is_dir_node(node) and node != "__root__":
+            self._drag_pending = True
+            self._drag_start_y = event.y
+            self._click_node = node
+            self._drag_type = "dir"
+            sel = self.tree.selection()
+            ctrl_or_shift = event.state & (0x0001 | 0x0004)
+            if len(sel) >= 2 and node in sel and not ctrl_or_shift:
+                return "break"
+
         if node and node.startswith("item_"):
             self._drag_pending = True
             self._drag_start_y = event.y
             self._click_node = node
+            self._drag_type = "item"
             sel = self.tree.selection()
             ctrl_or_shift = event.state & (0x0001 | 0x0004)
             if len(sel) >= 2 and node in sel and not ctrl_or_shift:
@@ -393,10 +423,25 @@ class ListView(ttk.Frame):
         if self._drag_pending:
             if abs(event.y - self._drag_start_y) > 6:
                 sel = self.tree.selection()
-                self._drag_item_iids = [
-                    iid for iid in sel if iid.startswith("item_")
-                ]
-                if not self._drag_item_iids:
+                if self._drag_type == "item":
+                    self._drag_item_iids = [
+                        iid for iid in sel if iid.startswith("item_")
+                    ]
+                elif self._drag_type == "dir":
+                    self._drag_dir_paths = [
+                        iid for iid in sel
+                        if self._is_dir_node(iid) and iid != "__root__"
+                    ]
+                    self._drag_dir_paths = [
+                        d for d in self._drag_dir_paths
+                        if not any(d != p and d.startswith(p + "/")
+                                   for p in self._drag_dir_paths)
+                    ]
+                else:
+                    self._drag_pending = False
+                    return
+
+                if not self._drag_item_iids and not self._drag_dir_paths:
                     self._drag_pending = False
                     return
                 self._drag_active = True
@@ -407,28 +452,56 @@ class ListView(ttk.Frame):
             node = self.tree.identify_row(event.y)
             if node != self._last_hover_node:
                 self._clear_drag_hover()
-                if node and node != "__root__" and self._is_dir_node(node):
-                    self.tree.tag_configure("_drag_hover", background="#d0e4f5")
-                    tags = list(self.tree.item(node, "tags"))
-                    if "_drag_hover" not in tags:
-                        tags.append("_drag_hover")
-                    self.tree.item(node, tags=tags)
-                    self._last_hover_node = node
+                if node and self._is_dir_node(node):
+                    valid = True
+                    if self._drag_type == "dir":
+                        if node != "__root__":
+                            for d in self._drag_dir_paths:
+                                if node == d or node.startswith(d + "/"):
+                                    valid = False
+                                    break
+                    elif node == "__root__":
+                        valid = False
+                    if valid:
+                        self.tree.tag_configure("_drag_hover", background="#d0e4f5")
+                        tags = list(self.tree.item(node, "tags"))
+                        if "_drag_hover" not in tags:
+                            tags.append("_drag_hover")
+                        self.tree.item(node, tags=tags)
+                        self._last_hover_node = node
 
     def _on_release(self, event):
         if self._drag_active:
             self.tree.configure(cursor="")
             self._clear_drag_hover()
             node = self.tree.identify_row(event.y)
-            if node and node != "__root__" and self._is_dir_node(node):
-                new_destino = node.rstrip("/") + "/"
-                items = [self._get_item(iid) for iid in self._drag_item_iids]
-                items = [i for i in items if i is not None]
-                if items and self.on_item_dropped:
-                    self.on_item_dropped(items, new_destino)
+
+            if self._drag_type == "dir":
+                if node and self._is_dir_node(node):
+                    valid = node == "__root__" or all(
+                        node != d and not node.startswith(d + "/")
+                        for d in self._drag_dir_paths
+                    )
+                    if valid:
+                        new_parent = node.rstrip("/") if node != "__root__" else ""
+                        if self._drag_dir_paths and self.on_dir_dropped:
+                            self.on_dir_dropped(self._drag_dir_paths, new_parent)
+                        if node != "__root__" and self.tree.exists(node):
+                            self.tree.item(node, open=True)
+            else:
+                if node and node != "__root__" and self._is_dir_node(node):
+                    new_destino = node.rstrip("/") + "/"
+                    items = [self._get_item(iid) for iid in self._drag_item_iids]
+                    items = [i for i in items if i is not None]
+                    if items and self.on_item_dropped:
+                        self.on_item_dropped(items, new_destino)
+
             self._drag_active = False
             self._drag_pending = False
+            self._drag_type = None
+            self._click_node = None
             self._drag_item_iids = []
+            self._drag_dir_paths = []
             return
 
         self._drag_pending = False
@@ -437,7 +510,8 @@ class ListView(ttk.Frame):
             return
 
         node = self._click_node
-        if node and node.startswith("item_"):
+        is_dir_click = node and self._is_dir_node(node) and node != "__root__"
+        if node and (node.startswith("item_") or is_dir_click):
             sel = self.tree.selection()
             if len(sel) >= 2 and node in sel:
                 self.tree.selection_set(node)

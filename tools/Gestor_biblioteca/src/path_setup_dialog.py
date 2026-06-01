@@ -29,7 +29,8 @@ class PathSetupDialog:
         self.dialog.title(title)
         self.dialog.transient(parent)
         self.dialog.grab_set()
-        self.dialog.resizable(False, False)
+        self.dialog.resizable(True, True)
+        self.dialog.geometry("680x420")
 
         self._build()
 

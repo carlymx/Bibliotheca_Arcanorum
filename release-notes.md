@@ -1,3 +1,3 @@
-## v0.9.6
+## v0.9.7
 
-Nuevo sistema de comprobación de actualizaciones: diálogo "Buscar actualizaciones" con terminal en vivo y demoras intencionales, notificación silenciosa en toolbar (label verde clickeable), y doble fallback SSL (certifi → contexto no verificado). Centralización del número de versión en `app.py` (`io_pack.py` y `build.spec` lo obtienen dinámicamente). Soporte de directorios anidados en "Nuevo directorio". Añadida dependencia `certifi`.
+Add directory drag-and-drop in the tree view with physical disk move, collision detection, child filtering, and dir_visible migration. Make PathSetupDialog resizable and wider. Fix stale `_click_node` reference causing TclError after tree rebuild. Protect `_is_dir_node` against deleted nodes. Remove redundant confirmation in delete-dir dialog. Auto-expand target directory after dropping.

@@ -290,16 +290,7 @@ class DetailView(ttk.Frame):
             self._on_dir_rename(self._dir_name, new_name)
 
     def _delete_dir(self):
-        if not self._dir_name:
-            return
-        if not messagebox.askyesno(
-            "Eliminar directorio",
-            f"¿Eliminar el directorio '{self._dir_name}'?\n\n"
-            "Los items que contiene se moverán a la raíz.\n"
-            "El directorio físico también se eliminará."
-        ):
-            return
-        if self._on_dir_delete:
+        if self._dir_name and self._on_dir_delete:
             self._on_dir_delete(self._dir_name)
 
     def _batch_apply(self, key: str, wtype: str, widget):
