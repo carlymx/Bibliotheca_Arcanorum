@@ -1,6 +1,5 @@
 import tkinter as tk
 from tkinter import ttk
-import webbrowser
 
 
 def _build_item(frame, title, desc, wraplength=680):
@@ -177,7 +176,7 @@ class HelpView(ttk.Frame):
              "alta = Información contrastada y completa.\n"
              "media = Información parcial o pendiente de verificar.\n"
              "baja = Ficha recién creada o con datos provisionales."),
-            ("Destino",
+            ("Ubicación Documento",
              "Ruta relativa (desde la raíz de la biblioteca) donde se encuentra el archivo físico. "
              "Se usa para agrupar fichas en directorios dentro del catálogo.\n\n"
              "Pulsa el botón '...' para elegir una carpeta del sistema."),
@@ -228,6 +227,29 @@ class HelpView(ttk.Frame):
         for title, desc in portada_help:
             _build_item(form_frame, title, desc, wraplength=660)
 
+        # Documento (sub-sección dentro del mismo LabelFrame)
+        ttk.Label(form_frame, text="Documento", font=("", 11, "bold", "underline")).pack(
+            anchor="w", pady=(8, 2)
+        )
+
+        doc_help = [
+            ("Subir Documento...",
+             "Abre un selector de archivos para copiar o mover un documento "
+             "al directorio de destino de la ficha. El nombre legible se "
+             "asigna automáticamente sin extensión.\n\n"
+             "Si el archivo ya existe, pregunta si sobrescribir.\n"
+             "El comportamiento (copiar/mover) se configura en Configuración."),
+            ("Abrir Directorio",
+             "Abre en el gestor de archivos la carpeta donde está (o debería "
+             "estar) el documento de la ficha actual."),
+            ("Limpiar",
+             "Elimina la referencia al documento de la ficha actual. "
+             "NO borra el archivo físico del disco."),
+        ]
+
+        for title, desc in doc_help:
+            _build_item(form_frame, title, desc, wraplength=660)
+
         ttk.Separator(scrollable, orient="horizontal").pack(fill="x", padx=20, pady=10)
 
         # ── Configuración ──
@@ -264,6 +286,12 @@ class HelpView(ttk.Frame):
              "    solo limpiar (borrar fichas pero dejar PDFs/portadas),\n"
              "    o mantener intactos (mover subdirectorios a raíz).\n"
              "  • Mantenidos: mover archivos a raíz o no borrar el directorio."),
+            ("Comportamiento upload",
+             "Configura si al subir portadas y documentos se copian o se mueven:\n\n"
+             "  • Portada: al subir una imagen, se copia (por defecto) al directorio "
+             "de portadas. Si eliges 'mover', se traslada y se elimina del origen.\n\n"
+             "  • Documento: al subir un archivo PDF (u otro formato), se copia al "
+             "directorio de destino de la ficha. Con 'mover', se traslada."),
         ]
 
         for title, desc in config_help:

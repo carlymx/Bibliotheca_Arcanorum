@@ -31,7 +31,7 @@ from .delete_dialog import DeleteItemDialog, DeleteDirDialog, DeleteDirResult
 from .update_dialog import UpdateCheckerDialog, urlopen_with_fallback, parse_version
 
 
-VERSION = "0.9.8"
+VERSION = "0.9.9"
 
 
 class App:
@@ -1417,7 +1417,7 @@ class App:
             threading.Thread(target=_do_check, daemon=True).start()
 
     def _about(self):
-        import webbrowser as _wb
+        from .update_dialog import open_url as _open_url
 
         win = tk.Toplevel(self.root)
         win.title("Acerca de")
@@ -1454,7 +1454,7 @@ class App:
             cursor="hand2",
         )
         link.pack()
-        link.bind("<Button-1>", lambda e: _wb.open("https://github.com/carlymx/Bibliotheca_Arcanorum"))
+        link.bind("<Button-1>", lambda e: _open_url("https://github.com/carlymx/Bibliotheca_Arcanorum"))
 
         ttk.Separator(frame, orient="horizontal").pack(fill="x", pady=12)
 
@@ -1471,7 +1471,7 @@ class App:
         lic_link.pack(side="left")
         lic_link.bind(
             "<Button-1>",
-            lambda e: _wb.open("https://www.gnu.org/licenses/gpl-3.0.html"),
+            lambda e: _open_url("https://www.gnu.org/licenses/gpl-3.0.html"),
         )
 
         ttk.Separator(frame, orient="horizontal").pack(fill="x", pady=12)
