@@ -8,7 +8,7 @@ import sys
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
-with open('tools/Gestor_biblioteca/src/app.py') as _f:
+with open('tools/Gestor_biblioteca/src/app.py', encoding='utf-8') as _f:
     _m = re.search(r'^VERSION\s*=\s*"([^"]+)"', _f.read(), re.M)
     VERSION = _m.group(1) if _m else "0.0.0"
 
