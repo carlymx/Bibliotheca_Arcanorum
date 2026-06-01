@@ -1,11 +1,13 @@
 import json
+import os
 import random
 import re
 import ssl
+import subprocess
+import sys
 import threading
 import time
 import tkinter as tk
-import webbrowser as _wb
 from datetime import datetime
 from tkinter import ttk
 
@@ -34,6 +36,24 @@ def urlopen_with_fallback(req, timeout=10):
         pass
     ctx = ssl._create_unverified_context()
     return urllib.request.urlopen(req, timeout=timeout, context=ctx)
+
+
+def open_url(url: str):
+    try:
+        import webbrowser
+        webbrowser.open(url)
+        return
+    except Exception:
+        pass
+    try:
+        if sys.platform == "darwin":
+            subprocess.Popen(["open", url])
+        elif sys.platform == "win32":
+            os.startfile(url)
+        else:
+            subprocess.Popen(["xdg-open", url])
+    except Exception:
+        pass
 
 
 class UpdateCheckerDialog:
@@ -113,7 +133,7 @@ class UpdateCheckerDialog:
 
     def _go_release(self):
         if self.url:
-            _wb.open(self.url)
+            open_url(self.url)
             self._on_close()
 
     def _do_check(self):

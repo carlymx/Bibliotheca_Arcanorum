@@ -1360,8 +1360,8 @@ class App:
 
     def _open_update_url(self):
         if self._update_url:
-            import webbrowser as _wb
-            _wb.open(self._update_url)
+            from .update_dialog import open_url
+            open_url(self._update_url)
 
     def _show_silent_update(self, tag: str, url: str):
         self._update_url = url
