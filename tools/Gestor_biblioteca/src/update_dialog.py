@@ -40,18 +40,21 @@ def urlopen_with_fallback(req, timeout=10):
 
 def open_url(url: str):
     try:
-        import webbrowser
-        webbrowser.open(url)
-        return
+        if sys.platform == "darwin":
+            subprocess.Popen(["open", url])
+            return
+        elif sys.platform == "win32":
+            os.startfile(url)
+            return
+        else:
+            subprocess.Popen(["xdg-open", url])
+            return
     except Exception:
         pass
     try:
-        if sys.platform == "darwin":
-            subprocess.Popen(["open", url])
-        elif sys.platform == "win32":
-            os.startfile(url)
-        else:
-            subprocess.Popen(["xdg-open", url])
+        import webbrowser
+        if webbrowser.open(url):
+            return
     except Exception:
         pass
 
