@@ -3,9 +3,14 @@
 # Uso: pyinstaller build.spec
 
 import os
+import re
 import sys
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+
+with open('tools/Gestor_biblioteca/src/app.py') as _f:
+    _m = re.search(r'^VERSION\s*=\s*"([^"]+)"', _f.read(), re.M)
+    VERSION = _m.group(1) if _m else "0.0.0"
 
 block_cipher = None
 
@@ -35,6 +40,7 @@ a = Analysis(
         'mutagen.id3',
         'rarfile',
         'mobi',
+        'certifi',
     ] + sv_ttk_submodules,
     hookspath=[],
     hooksconfig={},
@@ -77,8 +83,8 @@ if sys.platform == 'darwin':
         bundle_identifier='com.aquelarre.gestor-biblioteca',
         info_plist={
             'NSHighResolutionCapable': 'True',
-            'CFBundleShortVersionString': '0.9.1',
-            'CFBundleVersion': '0.9.1',
+            'CFBundleShortVersionString': VERSION,
+            'CFBundleVersion': VERSION,
         },
     )
 else:

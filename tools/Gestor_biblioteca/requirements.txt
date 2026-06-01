@@ -3,3 +3,4 @@ mutagen
 sv-ttk>=2.6.0
 rarfile     # para extraer portadas de CBR
 mobi        # para extraer portadas de MOBI/AZW3
+certifi     # certificados SSL para comprobación de actualizaciones

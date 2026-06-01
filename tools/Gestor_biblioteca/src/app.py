@@ -28,9 +28,10 @@ from .views.list_view import ListView
 from .views.detail_view import DetailView
 from .views.help_view import HelpView
 from .delete_dialog import DeleteItemDialog, DeleteDirDialog, DeleteDirResult
+from .update_dialog import UpdateCheckerDialog, urlopen_with_fallback, parse_version
 
 
-VERSION = "0.9.5"
+VERSION = "0.9.6"
 
 
 class App:
@@ -147,6 +148,14 @@ class App:
         ttk.Separator(self.toolbar, orient="vertical").pack(side="left", fill="y", padx=4)
         make_btn(self.toolbar, "📁", self._nuevo_directorio, "Nuevo directorio")
         make_btn(self.toolbar, "🚫", self._delete_dir_menu, "Eliminar directorio")
+
+        # ── spacer + update label (right side) ──
+        spacer = ttk.Frame(self.toolbar)
+        spacer.pack(side="left", fill="x", expand=True)
+        self._update_url = ""
+        self._update_label = ttk.Label(self.toolbar, foreground="green", cursor="hand2")
+        self._update_label.pack(side="left", padx=(0, 8))
+        self._update_label.bind("<Button-1>", lambda e: self._open_update_url())
 
         # ── notebook ──
         self.notebook = ttk.Notebook(self.root)
@@ -1079,9 +1088,18 @@ class App:
                     )
 
     def _nuevo_directorio(self):
+        dirs = self.list_view.get_selected_dirs()
+        items = self.list_view.get_selected_items()
+
+        parent = ""
+        if dirs:
+            parent = dirs[0].rstrip("/")
+        elif items:
+            parent = items[0].destino.rstrip("/")
+
         name = simpledialog.askstring(
             "Nuevo directorio",
-            "Nombre del nuevo directorio:",
+            f"Nombre del nuevo directorio{f' en \"{parent}\"' if parent else ''}:",
             parent=self.root,
         )
         if not name:
@@ -1090,20 +1108,22 @@ class App:
         if not name:
             return
 
+        full_name = f"{parent}/{name}" if parent else name
+
         library_root = self.config.get("library_root", "")
         if library_root:
-            dir_path = Path(library_root) / name
+            dir_path = Path(library_root) / full_name
             dir_path.mkdir(parents=True, exist_ok=True)
 
-        self.directorios.add(name)
+        self.directorios.add(full_name)
 
         portadas_root = self.config.get("portadas_root", "")
         if portadas_root:
-            (Path(portadas_root) / name).mkdir(parents=True, exist_ok=True)
+            (Path(portadas_root) / full_name).mkdir(parents=True, exist_ok=True)
 
         self.list_view.set_items(self.items, self.dir_visible, self.directorios)
         self._mark_dirty()
-        self.status_msg.config(text=f"Directorio creado: '{name}'")
+        self.status_msg.config(text=f"Directorio creado: '{full_name}'")
 
     def _delete_dir_menu(self):
         dirs = self.list_view.get_selected_dirs()
@@ -1265,45 +1285,47 @@ class App:
                 label = Path(path).stem
                 self._recent_menu.add_command(label=label, command=lambda p=path: self.open_json(p))
 
-    def _check_for_updates(self, silent: bool = False):
-        def _do_check():
-            try:
-                req = urllib.request.Request(
-                    "https://api.github.com/repos/CaRLymx/Bibliotheca_Arcanorum/releases/latest",
-                    headers={"Accept": "application/vnd.github.v3+json",
-                             "User-Agent": "GestorBiblioteca/1.0"},
-                )
-                with urllib.request.urlopen(req, timeout=10) as resp:
-                    data = json.loads(resp.read().decode())
-                latest_tag = data.get("tag_name", "").lstrip("vV")
-                if not latest_tag:
-                    return
-                current = tuple(int(x) for x in VERSION.split("."))
-                latest = tuple(int(x) for x in latest_tag.split("."))
-                if latest > current:
-                    self.root.after(0, lambda: self._show_update_available(
-                        data.get("tag_name", ""), data.get("html_url", "")))
-                elif not silent:
-                    self.root.after(0, lambda: messagebox.showinfo(
-                        "Actualizaciones",
-                        f"Tienes la última versión instalada: v{VERSION}"))
-            except Exception as e:
-                if not silent:
-                    self.root.after(0, lambda: messagebox.showerror(
-                        "Error de conexión",
-                        f"No se pudo comprobar actualizaciones:\n{e}"))
-        threading.Thread(target=_do_check, daemon=True).start()
+    def _open_update_url(self):
+        if self._update_url:
+            import webbrowser as _wb
+            _wb.open(self._update_url)
 
-    def _show_update_available(self, tag: str, url: str):
-        import webbrowser as _wb
-        resp = messagebox.askyesno(
-            "Actualización disponible",
-            f"Nueva versión {tag} disponible.\n"
-            f"Tienes instalado: v{VERSION}\n\n"
-            "¿Quieres abrir la página de descarga?",
-        )
-        if resp:
-            _wb.open(url)
+    def _show_silent_update(self, tag: str, url: str):
+        self._update_url = url
+        self._update_label.config(text=f"Existe una nueva versión {tag}  →")
+
+    def _check_for_updates(self, silent: bool = False):
+        if not silent:
+            dlg = UpdateCheckerDialog(self.root, VERSION)
+            self.root.wait_window(dlg.dialog)
+            if dlg.tag and dlg.url:
+                self._update_label.config(text=f"Existe una nueva versión {dlg.tag}  →")
+                self._update_url = dlg.url
+            else:
+                self._update_label.config(text="")
+                self._update_url = ""
+        else:
+            def _do_check():
+                try:
+                    req = urllib.request.Request(
+                        "https://api.github.com/repos/CaRLymx/Bibliotheca_Arcanorum/releases/latest",
+                        headers={"Accept": "application/vnd.github.v3+json",
+                                 "User-Agent": "GestorBiblioteca/1.0"},
+                    )
+                    resp = urlopen_with_fallback(req)
+                    data = json.loads(resp.read().decode())
+                    latest_tag = data.get("tag_name", "").lstrip("vV")
+                    if not latest_tag:
+                        return
+                    current_v = parse_version(VERSION)
+                    latest_v = parse_version(latest_tag)
+                    if latest_v > current_v:
+                        tag = data.get("tag_name", "")
+                        url = data.get("html_url", "")
+                        self.root.after(0, lambda t=tag, u=url: self._show_silent_update(t, u))
+                except Exception:
+                    pass
+            threading.Thread(target=_do_check, daemon=True).start()
 
     def _about(self):
         import webbrowser as _wb

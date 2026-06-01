@@ -23,12 +23,18 @@ class UnsupportedVersionError(BibliotexError):
     pass
 
 
+def _get_app_version() -> str:
+    from .app import VERSION
+    return VERSION
+
 def _build_metadata(
     biblioteca_origen: str = "",
     comentario: str = "",
     directorio_base: str = "",
-    app_version: str = "0.9.5",
+    app_version: str = "",
 ) -> dict:
+    if not app_version:
+        app_version = _get_app_version()
     return {
         "format_version": BIBLIOTEX_FORMAT_VERSION,
         "tipo_exportacion": "item_selection",
