@@ -79,7 +79,7 @@ def import_file(
         cb(pct, f"Procesando item {idx + 1}/{len(items)}...")
 
         try:
-            _remap_destino(item, library_root, opciones)
+            _remap_destino(item, library_root, portadas_root, opciones)
         except Exception as e:
             result.errores.append({
                 "item": item,
@@ -123,20 +123,18 @@ def import_file(
     return result
 
 
-def _remap_destino(item: Item, library_root: str, opciones: ImportOptions):
+def _remap_destino(item: Item, library_root: str, portadas_root: str, opciones: ImportOptions):
     if not item.destino:
         return
 
     if opciones.modo_destino == "carpeta_fija" and opciones.carpeta_destino:
         item.destino = opciones.carpeta_destino.rstrip("/") + "/"
-        return
 
     if library_root:
-        dest_path = Path(library_root, item.destino)
-        if item.destino.endswith("/"):
-            dest_path.mkdir(parents=True, exist_ok=True)
-        else:
-            dest_path.parent.mkdir(parents=True, exist_ok=True)
+        Path(library_root, item.destino).mkdir(parents=True, exist_ok=True)
+
+    if portadas_root:
+        Path(portadas_root, item.destino).mkdir(parents=True, exist_ok=True)
 
 
 def _check_pdf_existence(

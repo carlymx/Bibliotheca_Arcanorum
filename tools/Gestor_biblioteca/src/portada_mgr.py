@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple
 from .models import Item
 
 PORTADA_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".gif")
+DOCUMENTO_EXTENSIONS = (".pdf", ".epub", ".mobi", ".cbz", ".cbr", ".zip", ".docx")
 
 
 def _web_rel_path(abs_path: str, web_root: str) -> str:
@@ -40,7 +41,7 @@ def resolve_portada_file(portadas_root: str, destino: str,
 
 
 def upload(item: Item, source_path: str, portadas_root: str,
-           web_root: str = "") -> str:
+           web_root: str = "", accion: str = "copiar") -> str:
     src = Path(source_path)
     if not src.exists():
         raise FileNotFoundError(f"La imagen no existe: {source_path}")
@@ -52,7 +53,10 @@ def upload(item: Item, source_path: str, portadas_root: str,
     dest_file = dest_dir / item.portada_filename(".jpg")
 
     if src.resolve() != dest_file.resolve():
-        shutil.copy2(str(src), str(dest_file))
+        if accion == "mover":
+            shutil.move(str(src), str(dest_file))
+        else:
+            shutil.copy2(str(src), str(dest_file))
 
     item.portada = _web_rel_path(str(dest_file), web_root)
 
@@ -181,3 +185,85 @@ def move_item(item: Item, old_destino: str, new_destino: str,
     if origen.exists():
         destino.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(origen), str(destino))
+
+
+def upload_documento(
+    item: Item,
+    source_path: str,
+    library_root: str,
+    accion: str = "copiar",
+) -> str:
+    src = Path(source_path)
+    if not src.exists():
+        raise FileNotFoundError(f"El archivo no existe: {source_path}")
+
+    if not library_root or not item.destino:
+        raise ValueError("library_root y destino requeridos")
+
+    dest_dir = Path(library_root) / item.destino.rstrip("/")
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    dest_file = dest_dir / src.name
+
+    if src.resolve() != dest_file.resolve():
+        if dest_file.exists():
+            raise FileExistsError(
+                f"El archivo ya existe: {dest_file}"
+            )
+        if accion == "mover":
+            shutil.move(str(src), str(dest_file))
+        else:
+            shutil.copy2(str(src), str(dest_file))
+
+    item.nombre_legible = Path(src.name).stem
+    return str(dest_file)
+
+
+def rename_item_files(
+    item: Item,
+    old_nombre: str,
+    new_nombre: str,
+    library_root: str,
+    portadas_root: str,
+) -> dict:
+    if old_nombre == new_nombre:
+        return {}
+
+    old_stem = Path(old_nombre).stem
+    new_stem = Path(new_nombre).stem
+    destino = (item.destino or "").rstrip("/")
+    result = {"documento": False, "portada": False, "exists": False}
+
+    if library_root and destino and old_nombre:
+        old_doc = Path(library_root) / destino / old_nombre
+        new_doc = Path(library_root) / destino / new_nombre
+        if old_doc.exists():
+            if new_doc.exists():
+                result["exists"] = True
+                result["file"] = str(new_doc)
+            else:
+                old_doc.rename(new_doc)
+                result["documento"] = True
+
+    if portadas_root and destino and old_stem != new_stem:
+        port_dir = Path(portadas_root) / destino
+        if port_dir.exists():
+            for ext in PORTADA_EXTENSIONS:
+                old_port = port_dir / f"[portada]_{old_stem}{ext}"
+                if old_port.exists():
+                    new_port = port_dir / f"[portada]_{new_stem}{ext}"
+                    if new_port.exists():
+                        if not result["exists"]:
+                            result["exists"] = True
+                            result["file"] = str(new_port)
+                    else:
+                        old_port.rename(new_port)
+                        result["portada"] = True
+                        if item.portada:
+                            item.portada = item.portada.replace(
+                                f"[portada]_{old_stem}{ext}",
+                                f"[portada]_{new_stem}{ext}",
+                            )
+                    break
+
+    return result

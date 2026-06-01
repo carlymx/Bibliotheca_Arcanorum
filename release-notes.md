@@ -1,3 +1,10 @@
-## v0.9.7
+## v0.9.8
 
-Add directory drag-and-drop in the tree view with physical disk move, collision detection, child filtering, and dir_visible migration. Make PathSetupDialog resizable and wider. Fix stale `_click_node` reference causing TclError after tree rebuild. Protect `_is_dir_node` against deleted nodes. Remove redundant confirmation in delete-dir dialog. Auto-expand target directory after dropping.
+- Fix: apertura URL robusta con fallback OS-specific
+- Fix: encoding UTF-8 en build.spec para Windows
+- Fix: nombre_legible muestra sin extensión, preserva extensión al renombrar
+- Mejora: importación robusta con creación de directorios en library_root y portadas_root
+- Mejora: upload de portada y documento configurable (copiar/mover)
+- Mejora: sección Documento en propiedades
+- Mejora: layout compacto (Tipo/Edición/Confianza y Escaneado/Peso en una línea)
+- CI: action-gh-release actualizado a v3

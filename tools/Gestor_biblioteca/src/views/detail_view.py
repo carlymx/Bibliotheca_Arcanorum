@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import sys
 import tkinter as tk
@@ -8,7 +9,11 @@ from pathlib import Path
 from typing import Callable, List, Optional
 
 from ..models import Item
-from ..portada_mgr import upload as upload_portada, find_existing
+from ..portada_mgr import (
+    upload as upload_portada,
+    upload_documento,
+    rename_item_files,
+)
 from ..portadas_extract_dialog import SinglePortadaExtractDialog
 from ..utils.tooltip import ToolTip, make_btn as _icon_btn
 
@@ -50,6 +55,8 @@ class DetailView(ttk.Frame):
         self._library_root: str = ""
         self._on_dir_rename: Optional[Callable[[str, str], None]] = None
         self._on_dir_delete: Optional[Callable[[str], None]] = None
+        self._upload_portada_accion: str = "copiar"
+        self._upload_documento_accion: str = "copiar"
 
         self._build()
         self._build_batch()
@@ -63,6 +70,12 @@ class DetailView(ttk.Frame):
 
     def set_library_root(self, path: str):
         self._library_root = path
+
+    def set_upload_portada_accion(self, accion: str):
+        self._upload_portada_accion = accion
+
+    def set_upload_documento_accion(self, accion: str):
+        self._upload_documento_accion = accion
 
     # ── build ──────────────────────────────────────────────
 
@@ -146,13 +159,27 @@ class DetailView(ttk.Frame):
             row += 1
 
         add_field("Nombre legible", "nombre_legible", "entry")
-        add_field("Tipo", "tipo", "combo", ["manual", "suplemento", "campaña", "aventura", "revista", "documento", "info", "imagen", "mapa", "hoja_pj", "pantalla", "musica", "otro"])
-        add_field("Edición", "edicion", "combo",
-                   ["1ª", "2ª", "3ª", "4ª", "5ª", "6ª", "7ª", "8ª", "9ª", "10ª",
-                    "11ª", "12ª", "13ª", "14ª", "15ª", "16ª", "17ª", "18ª", "19ª", "20ª",
-                    "indeterminada"])
-        add_field("Confianza", "confianza", "combo", ["alta", "media", "baja"])
-        add_field("Destino", "destino", "file_path", readonly=True)
+        add_field("Ubicación Documento", "destino", "file_path", readonly=True)
+
+        def _make_combo(parent, key, values, expand=True):
+            w = ttk.Combobox(parent, values=values, state="readonly")
+            w.bind("<<ComboboxSelected>>", self._mark_dirty, add="+")
+            w.pack(side="left", fill="x", expand=expand)
+            self._fields[key] = w
+
+        # Row: Tipo | Edición | Confianza
+        row_tc = ttk.Frame(scrollable)
+        row_tc.grid(row=row, column=0, sticky="ew", **pad_x)
+        ttk.Label(row_tc, text="Tipo", width=8, anchor="w").pack(side="left")
+        _make_combo(row_tc, "tipo", ["manual", "suplemento", "campaña", "aventura", "revista", "documento", "info", "imagen", "mapa", "hoja_pj", "pantalla", "musica", "otro"])
+        ttk.Label(row_tc, text="Edición", width=8, anchor="e").pack(side="left", padx=(4, 0))
+        _make_combo(row_tc, "edicion", ["1ª", "2ª", "3ª", "4ª", "5ª", "6ª", "7ª", "8ª", "9ª", "10ª",
+                                         "11ª", "12ª", "13ª", "14ª", "15ª", "16ª", "17ª", "18ª", "19ª", "20ª",
+                                         "indeterminada"], expand=False)
+        ttk.Label(row_tc, text="Confianza", width=9, anchor="e").pack(side="left", padx=(4, 0))
+        _make_combo(row_tc, "confianza", ["alta", "media", "baja"])
+        scrollable.columnconfigure(0, weight=1)
+        row += 1
 
         add_field("Descripción", "descripcion", "text")
         add_field("Justificación", "justificacion", "text")
@@ -163,8 +190,49 @@ class DetailView(ttk.Frame):
         row += 1
 
         add_field("Archivo Hash", "archivo_hash", "entry", readonly=True)
-        add_field("Peso", "peso", "entry")
-        add_field("Escaneado", "escaneado", "check")
+
+        # Row: Escaneado | Peso
+        row_pe = ttk.Frame(scrollable)
+        row_pe.grid(row=row, column=0, sticky="ew", **pad_x)
+        ttk.Label(row_pe, text="Escaneado", width=20, anchor="w").pack(side="left")
+        self._var_escaneado = tk.BooleanVar()
+        self._var_escaneado.trace_add("write", lambda *_: self._mark_dirty())
+        ttk.Checkbutton(row_pe, variable=self._var_escaneado).pack(side="left")
+        ttk.Label(row_pe, text="Peso", width=6, anchor="e").pack(side="left", padx=(8, 0))
+        w_peso = ttk.Entry(row_pe)
+        w_peso.bind("<KeyRelease>", self._mark_dirty, add="+")
+        w_peso.pack(side="left", fill="x", expand=True)
+        self._fields["peso"] = w_peso
+        scrollable.columnconfigure(0, weight=1)
+        row += 1
+        # ── documento fields ──
+        ttk.Separator(scrollable, orient="horizontal").grid(
+            row=row, column=0, sticky="ew", pady=5, **pad_x
+        )
+        row += 1
+
+        ttk.Label(scrollable, text="Documento", font=("", 10, "bold")).grid(
+            row=row, column=0, sticky="w", **pad_x
+        )
+        row += 1
+
+        doc_path_frame = ttk.Frame(scrollable)
+        doc_path_frame.grid(row=row, column=0, sticky="ew", **pad_x)
+        ttk.Label(doc_path_frame, text="Ruta documento", width=20, anchor="w").pack(side="left")
+        self.documento_path = ttk.Entry(doc_path_frame, state="readonly")
+        self.documento_path.pack(side="left", fill="x", expand=True)
+        row += 1
+
+        doc_btn_frame = ttk.Frame(scrollable)
+        doc_btn_frame.grid(row=row, column=0, sticky="w", **pad_x, pady=(2, 5))
+        ttk.Button(doc_btn_frame, text="Subir Documento...",
+                   command=self._upload_documento).pack(side="left", padx=2)
+        ttk.Button(doc_btn_frame, text="Abrir Directorio",
+                   command=self._open_documento_dir).pack(side="left", padx=2)
+        ttk.Button(doc_btn_frame, text="Limpiar",
+                   command=self._clear_documento).pack(side="left", padx=2)
+        row += 1
+
         # ── portada fields ──
         ttk.Separator(scrollable, orient="horizontal").grid(
             row=row, column=0, sticky="ew", pady=5, **pad_x
@@ -421,6 +489,9 @@ class DetailView(ttk.Frame):
         self.portada_path.configure(state="normal")
         self.portada_path.delete(0, "end")
         self.portada_path.configure(state="readonly")
+        self.documento_path.configure(state="normal")
+        self.documento_path.delete(0, "end")
+        self.documento_path.configure(state="readonly")
 
     def _fields_to_ui(self, item: Item):
         def set_entry(key, val):
@@ -450,7 +521,7 @@ class DetailView(ttk.Frame):
             if hasattr(self, var_name):
                 getattr(self, var_name).set(bool(val))
 
-        set_entry("nombre_legible", item.nombre_legible)
+        set_entry("nombre_legible", Path(item.nombre_legible).stem if item.nombre_legible else "")
         set_combo("tipo", item.tipo)
         set_combo("edicion", item.edicion)
         set_combo("confianza", item.confianza)
@@ -462,6 +533,7 @@ class DetailView(ttk.Frame):
         set_check("escaneado", item.escaneado)
 
         self._update_portada_preview(item)
+        self._update_documento_preview(item)
 
     # ── portada preview ────────────────────────────────────
 
@@ -542,7 +614,10 @@ class DetailView(ttk.Frame):
             return
 
         try:
-            upload_portada(self._item, path, self._portadas_root, self._web_root)
+            upload_portada(
+                self._item, path, self._portadas_root, self._web_root,
+                accion=self._upload_portada_accion,
+            )
             self._update_portada_preview()
             self._mark_dirty()
             if self.on_item_changed:
@@ -629,6 +704,124 @@ class DetailView(ttk.Frame):
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo abrir el directorio:\n{e}")
 
+    # ── documento actions ──────────────────────────────────
+
+    def _resolve_documento_path(self) -> Optional[str]:
+        if not self._item or not self._item.nombre_legible:
+            return None
+        if not self._library_root:
+            return None
+        return str(Path(self._library_root) / (self._item.destino or "") / self._item.nombre_legible)
+
+    def _update_documento_preview(self, item: Optional[Item] = None):
+        item = item or self._item
+        self.documento_path.configure(state="normal")
+        self.documento_path.delete(0, "end")
+        if not item or not item.nombre_legible:
+            self.documento_path.configure(state="readonly")
+            return
+        full = self._resolve_documento_path()
+        if full and Path(full).exists():
+            self.documento_path.insert(0, full)
+        elif full:
+            self.documento_path.insert(0, f"(no encontrado) {full}")
+        else:
+            self.documento_path.insert(0, item.nombre_legible)
+        self.documento_path.configure(state="readonly")
+
+    def _upload_documento(self):
+        if not self._item:
+            return
+
+        initial = self._library_root or os.getcwd()
+        path = filedialog.askopenfilename(
+            title="Seleccionar documento",
+            initialdir=initial,
+            filetypes=[
+                ("Documentos", "*.pdf *.epub *.mobi *.cbz *.cbr *.zip *.docx"),
+                ("Todos los archivos", "*.*"),
+            ],
+        )
+        if not path:
+            return
+
+        if not self._library_root:
+            messagebox.showwarning(
+                "Sin ruta de biblioteca",
+                "Configura la 'Ruta biblioteca' en la pestaña Configuración primero.",
+            )
+            return
+
+        if not self._item.destino:
+            messagebox.showwarning(
+                "Sin destino",
+                "Configura la 'Ubicación Documento' antes de subir un documento.",
+            )
+            return
+
+        try:
+            upload_documento(
+                self._item, path, self._library_root,
+                accion=self._upload_documento_accion,
+            )
+            self._update_documento_preview()
+            self._mark_dirty()
+            if self.on_item_changed:
+                self.on_item_changed(self._item)
+        except FileExistsError:
+            if messagebox.askyesno(
+                "Sobrescribir",
+                f"El archivo '{Path(path).name}' ya existe en el destino.\n"
+                "¿Sobrescribirlo?",
+            ):
+                try:
+                    dest = Path(self._library_root) / self._item.destino / Path(path).name
+                    if self._upload_documento_accion == "mover":
+                        shutil.move(path, str(dest))
+                    else:
+                        shutil.copy2(path, str(dest))
+                    self._item.nombre_legible = Path(path).stem
+                    self._update_documento_preview()
+                    self._mark_dirty()
+                    if self.on_item_changed:
+                        self.on_item_changed(self._item)
+                except Exception as e2:
+                    messagebox.showerror("Error al sobrescribir", str(e2))
+        except Exception as e:
+            messagebox.showerror("Error al subir documento", str(e))
+
+    def _open_documento_dir(self):
+        if not self._item:
+            return
+        target = str(Path(self._library_root) / (self._item.destino or "")) if self._library_root else ""
+        if not target or not Path(target).exists():
+            if self._library_root:
+                target = self._library_root
+            else:
+                messagebox.showinfo(
+                    "Sin directorio",
+                    "No hay directorio de documento configurado.",
+                )
+                return
+        try:
+            if sys.platform == "win32":
+                os.startfile(target)
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", target])
+            else:
+                subprocess.Popen(["xdg-open", target])
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo abrir el directorio:\n{e}")
+
+    def _clear_documento(self):
+        if not self._item:
+            return
+        self._item.nombre_legible = ""
+        self._update_documento_preview()
+        self._mark_dirty()
+        if self.on_item_changed:
+            self.on_item_changed(self._item)
+
     # ── apply / revert ─────────────────────────────────────
 
     def _ui_to_fields(self, item: Item) -> Item:
@@ -666,7 +859,36 @@ class DetailView(ttk.Frame):
     def _apply(self):
         if not self._item:
             return
+        old_nombre = self._item.nombre_legible
         self._ui_to_fields(self._item)
+        new_nombre = self._item.nombre_legible
+
+        if "." not in new_nombre and "." in old_nombre:
+            self._item.nombre_legible = new_nombre + Path(old_nombre).suffix
+            new_nombre = self._item.nombre_legible
+
+        if new_nombre != old_nombre:
+            result = rename_item_files(
+                self._item, old_nombre, new_nombre,
+                self._library_root, self._portadas_root,
+            )
+            if result.get("exists"):
+                if not messagebox.askyesno(
+                    "Sobrescribir",
+                    f"El archivo '{Path(result['file']).name}' ya existe.\n"
+                    "¿Sobrescribirlo?",
+                ):
+                    self._item.nombre_legible = old_nombre
+                    self._fields_to_ui(self._item)
+                    return
+                result = rename_item_files(
+                    self._item, old_nombre, new_nombre,
+                    self._library_root, self._portadas_root,
+                )
+            if result.get("documento") or result.get("portada"):
+                self._update_portada_preview()
+                self._update_documento_preview()
+
         self._dirty_label.pack_forget()
         self._dirty = False
         if self.on_item_changed:

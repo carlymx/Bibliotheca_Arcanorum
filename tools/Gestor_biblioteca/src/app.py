@@ -31,7 +31,7 @@ from .delete_dialog import DeleteItemDialog, DeleteDirDialog, DeleteDirResult
 from .update_dialog import UpdateCheckerDialog, urlopen_with_fallback, parse_version
 
 
-VERSION = "0.9.7"
+VERSION = "0.9.8"
 
 
 class App:
@@ -181,6 +181,10 @@ class App:
         self.detail_view = DetailView(paned, on_item_changed=self._on_item_changed)
         paned.add(self.detail_view, weight=1)
         self.detail_view.set_library_root(self.config.get("library_root", ""))
+        self.detail_view.set_upload_portada_accion(
+            self.config.get("upload_portada_comportamiento", "copiar"))
+        self.detail_view.set_upload_documento_accion(
+            self.config.get("upload_documento_comportamiento", "copiar"))
 
         self.settings_view = SettingsView(
             self.notebook,
@@ -267,6 +271,10 @@ class App:
         self.detail_view.set_web_root(self.config.get("web_root", ""))
         self.detail_view.set_portadas_root(self.config.get("portadas_root", ""))
         self.detail_view.set_library_root(self.config.get("library_root", ""))
+        self.detail_view.set_upload_portada_accion(
+            self.config.get("upload_portada_comportamiento", "copiar"))
+        self.detail_view.set_upload_documento_accion(
+            self.config.get("upload_documento_comportamiento", "copiar"))
         return True
 
     # ── actions ────────────────────────────────────────────
@@ -303,6 +311,10 @@ class App:
             self.detail_view.set_web_root(self.config.get("web_root", ""))
             self.detail_view.set_portadas_root(self.config.get("portadas_root", ""))
             self.detail_view.set_library_root(self.config.get("library_root", ""))
+            self.detail_view.set_upload_portada_accion(
+                self.config.get("upload_portada_comportamiento", "copiar"))
+            self.detail_view.set_upload_documento_accion(
+                self.config.get("upload_documento_comportamiento", "copiar"))
             self.settings_view.set_fields_from_config(self.config)
             self._update_status()
             self.status_msg.config(text=f"Cargados {len(self.items)} items de {path}")
@@ -1338,6 +1350,10 @@ class App:
         self.detail_view.set_web_root(config.get("web_root", ""))
         self.detail_view.set_portadas_root(config.get("portadas_root", ""))
         self.detail_view.set_library_root(config.get("library_root", ""))
+        self.detail_view.set_upload_portada_accion(
+            config.get("upload_portada_comportamiento", "copiar"))
+        self.detail_view.set_upload_documento_accion(
+            config.get("upload_documento_comportamiento", "copiar"))
         self._apply_theme(config.get("theme", "default"))
         refresh_icons(self.toolbar)
         self._update_status()

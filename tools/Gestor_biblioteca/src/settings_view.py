@@ -16,6 +16,8 @@ DEFAULT_CONFIG = {
     "scan_exclude": ["./Portadas", "./99 - No Clasificados", "*.json", "*.js"],
     "backup_count": 2,
     "mover_items_fisicamente": True,
+    "upload_portada_comportamiento": "copiar",
+    "upload_documento_comportamiento": "copiar",
     "theme": "default",
     "nombre_biblioteca": "",
     "recent_libraries": [],
@@ -214,6 +216,32 @@ class SettingsView(ttk.Frame):
             font=("", 9),
             foreground="gray",
         ).pack(anchor="w", pady=(4, 0))
+
+        ttk.Separator(drag_frame, orient="horizontal").pack(fill="x", pady=8)
+
+        ttk.Label(drag_frame, text="Al subir archivos", font=("", 10, "bold")).pack(anchor="w")
+
+        row_p = ttk.Frame(drag_frame)
+        row_p.pack(fill="x", pady=(5, 2))
+        ttk.Label(row_p, text="Portadas:", width=25, anchor="w").pack(side="left")
+        self._up_portada_var = tk.StringVar(
+            value=self.config_data.get("upload_portada_comportamiento", "copiar")
+        )
+        ttk.Combobox(
+            row_p, textvariable=self._up_portada_var,
+            values=["copiar", "mover"], state="readonly", width=12,
+        ).pack(side="left")
+
+        row_d = ttk.Frame(drag_frame)
+        row_d.pack(fill="x", pady=2)
+        ttk.Label(row_d, text="Documentos:", width=25, anchor="w").pack(side="left")
+        self._up_documento_var = tk.StringVar(
+            value=self.config_data.get("upload_documento_comportamiento", "copiar")
+        )
+        ttk.Combobox(
+            row_d, textvariable=self._up_documento_var,
+            values=["copiar", "mover"], state="readonly", width=12,
+        ).pack(side="left")
 
     def _build_theme_section(self, parent):
         theme_frame = ttk.LabelFrame(parent, text="Apariencia", padding=10)
@@ -468,6 +496,8 @@ class SettingsView(ttk.Frame):
         except ValueError:
             config["backup_count"] = DEFAULT_CONFIG["backup_count"]
         config["mover_items_fisicamente"] = self._mover_var.get()
+        config["upload_portada_comportamiento"] = self._up_portada_var.get()
+        config["upload_documento_comportamiento"] = self._up_documento_var.get()
         config["theme"] = self._theme_var.get()
         config["export_formato_default"] = self._export_formato_var.get()
         config["export_incluir_portadas"] = self._export_portadas_var.get()
@@ -520,6 +550,8 @@ class SettingsView(ttk.Frame):
         self.exclude_text.insert("1.0", "\n".join(defaults))
         self.backup_spin.set(DEFAULT_CONFIG["backup_count"])
         self._mover_var.set(DEFAULT_CONFIG.get("mover_items_fisicamente", True))
+        self._up_portada_var.set(DEFAULT_CONFIG["upload_portada_comportamiento"])
+        self._up_documento_var.set(DEFAULT_CONFIG["upload_documento_comportamiento"])
         self._theme_var.set(DEFAULT_CONFIG["theme"])
         self._update_theme_preview()
         self._export_formato_var.set(DEFAULT_CONFIG["export_formato_default"])
