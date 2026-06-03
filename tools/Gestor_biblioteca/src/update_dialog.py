@@ -38,12 +38,28 @@ def urlopen_with_fallback(req, timeout=10):
     return urllib.request.urlopen(req, timeout=timeout, context=ctx)
 
 
+def _subprocess_env() -> dict:
+    env = dict(os.environ)
+    for k in ("APPIMAGE", "APPDIR", "OWD"):
+        env.pop(k, None)
+    lp_key = "LD_LIBRARY_PATH"
+    lp_orig = env.get(lp_key + "_ORIG")
+    if lp_orig is not None:
+        env[lp_key] = lp_orig
+    else:
+        env.pop(lp_key, None)
+    return env
+
+
 def open_url(url: str):
     import shutil
 
+    DEVNULL = subprocess.DEVNULL
+
     if sys.platform == "darwin":
         try:
-            subprocess.run(["open", url], check=True, timeout=5)
+            subprocess.run(["open", url], check=True, timeout=5,
+                           stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
             return
         except Exception:
             pass
@@ -54,29 +70,53 @@ def open_url(url: str):
         except Exception:
             pass
     else:
-        # Linux: try xdg-open first, then webbrowser, then known browsers
+        is_url = url.startswith(("http://", "https://"))
+
         xdg = shutil.which("xdg-open")
+        if not xdg:
+            for p in ("/usr/bin/xdg-open", "/usr/local/bin/xdg-open"):
+                if os.path.isfile(p):
+                    xdg = p
+                    break
         if xdg:
             try:
-                subprocess.run([xdg, url], check=True, timeout=5)
+                subprocess.run([xdg, url], check=True, timeout=5,
+                               stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL,
+                               env=_subprocess_env())
                 return
             except Exception:
                 pass
+
         try:
             import webbrowser
             if webbrowser.open(url):
                 return
         except Exception:
             pass
-        for browser in ("firefox", "google-chrome", "chromium",
-                        "chromium-browser", "brave-browser"):
-            path = shutil.which(browser)
-            if path:
-                try:
-                    subprocess.run([path, url], check=True, timeout=10)
-                    return
-                except Exception:
-                    pass
+
+        if is_url:
+            for browser in ("firefox", "google-chrome", "chromium",
+                            "chromium-browser", "brave-browser"):
+                path = shutil.which(browser)
+                if path:
+                    try:
+                        subprocess.run([path, url], check=True, timeout=10,
+                                       stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL,
+                                       env=_subprocess_env())
+                        return
+                    except Exception:
+                        pass
+        else:
+            for fm in ("nautilus", "nemo", "thunar", "dolphin", "pcmanfm", "caja"):
+                path = shutil.which(fm)
+                if path:
+                    try:
+                        subprocess.run([path, url], check=True, timeout=10,
+                                       stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL,
+                                       env=_subprocess_env())
+                        return
+                    except Exception:
+                        pass
 
 
 class UpdateCheckerDialog:
