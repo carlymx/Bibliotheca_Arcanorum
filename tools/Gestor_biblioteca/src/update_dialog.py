@@ -54,6 +54,7 @@ def open_url(url: str):
         except Exception:
             pass
     else:
+        # Linux: try xdg-open first, then webbrowser, then known browsers
         xdg = shutil.which("xdg-open")
         if xdg:
             try:
@@ -61,13 +62,21 @@ def open_url(url: str):
                 return
             except Exception:
                 pass
-
-    try:
-        import webbrowser
-        if webbrowser.open(url):
-            return
-    except Exception:
-        pass
+        try:
+            import webbrowser
+            if webbrowser.open(url):
+                return
+        except Exception:
+            pass
+        for browser in ("firefox", "google-chrome", "chromium",
+                        "chromium-browser", "brave-browser"):
+            path = shutil.which(browser)
+            if path:
+                try:
+                    subprocess.run([path, url], check=True, timeout=10)
+                    return
+                except Exception:
+                    pass
 
 
 class UpdateCheckerDialog:

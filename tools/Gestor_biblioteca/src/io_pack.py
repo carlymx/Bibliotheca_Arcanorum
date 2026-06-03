@@ -31,7 +31,7 @@ def _build_metadata(
     biblioteca_origen: str = "",
     comentario: str = "",
     directorio_base: str = "",
-    app_version: str = "0.9.10",
+    app_version: str = "0.9.11",
 ) -> dict:
     if not app_version:
         app_version = _get_app_version()

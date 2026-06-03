@@ -95,7 +95,7 @@ def _init_emoji_style():
     elif sys.platform == "darwin":
         candidates = ["Apple Color Emoji"]
     else:
-        candidates = ["Noto Color Emoji"]
+        candidates = ["Noto Color Emoji", "Noto Emoji", "FreeSerif", "DejaVu Sans"]
     available = font.families()
     for name in candidates:
         if name in available:
@@ -119,6 +119,8 @@ def make_btn(parent, icon, command, tooltip_text):
             kwargs["style"] = _EMOJI_STYLE
 
     btn = ttk.Button(parent, **kwargs)
+    if img:
+        btn.image = img
     btn._icon_key = icon
     btn.pack(side="left", padx=1)
     ToolTip(btn, tooltip_text)

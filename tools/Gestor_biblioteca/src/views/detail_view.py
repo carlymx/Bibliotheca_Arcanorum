@@ -1,7 +1,5 @@
 import os
 import shutil
-import subprocess
-import sys
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from io import BytesIO
@@ -15,6 +13,7 @@ from ..portada_mgr import (
     rename_item_files,
 )
 from ..portadas_extract_dialog import SinglePortadaExtractDialog
+from ..update_dialog import open_url as _open_path
 from ..utils.tooltip import ToolTip, make_btn as _icon_btn
 
 
@@ -694,15 +693,7 @@ class DetailView(ttk.Frame):
                     f"No existe:\n{target}",
                 )
                 return
-        try:
-            if sys.platform == "win32":
-                os.startfile(target)
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", target])
-            else:
-                subprocess.Popen(["xdg-open", target])
-        except Exception as e:
-            messagebox.showerror("Error", f"No se pudo abrir el directorio:\n{e}")
+        _open_path(target)
 
     # ── documento actions ──────────────────────────────────
 
@@ -803,15 +794,7 @@ class DetailView(ttk.Frame):
                     "No hay directorio de documento configurado.",
                 )
                 return
-        try:
-            if sys.platform == "win32":
-                os.startfile(target)
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", target])
-            else:
-                subprocess.Popen(["xdg-open", target])
-        except Exception as e:
-            messagebox.showerror("Error", f"No se pudo abrir el directorio:\n{e}")
+        _open_path(target)
 
     def _clear_documento(self):
         if not self._item:

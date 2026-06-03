@@ -1,3 +1,5 @@
-## v0.9.10
+## v0.9.11
 
-- Fix: open_url ahora usa subprocess.run con check=True y shutil.which para que los links funcionen en compilados PyInstaller
+- Fix: icono diskete no se mostraba en compilados (GC de PhotoImage + más fuentes emoji)
+- Fix: apertura de URLs y directorios en Linux con búsqueda directa de navegadores
+- Nuevo frontend web
