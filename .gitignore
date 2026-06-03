@@ -3,6 +3,7 @@
 Thumbs.db
 Desktop.ini
 *.swp
+*-swp
 *.swo
 *~
 
